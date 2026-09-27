@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sagtrack · rotas de Aparecida</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    :root {
+      --fundo: #f4f1ea;
+      --papel: #fffdf8;
+      --tinta: #1c2430;
+      --muted: #5c6b7a;
+      --linha: #e4ddd0;
+      --verde: #1f7a4d;
+      --ambar: #a56b00;
+      --vermelho: #b42318;
+      --traco: #1d4e89;
+      --setor: #8a6a12;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    body {
+      font: 14px/1.45 "Segoe UI", sans-serif;
+      color: var(--tinta);
+      background: var(--fundo);
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+    header {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      background: var(--papel);
+      border-bottom: 1px solid var(--linha);
+    }
+    header h1 { font-size: 18px; margin: 0; font-weight: 650; }
+    header p { margin: 2px 0 0; color: var(--muted); font-size: 12px; }
+    .controles { display: flex; gap: 8px; align-items: end; flex-wrap: wrap; }
+    label { display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: var(--muted); }
+    input {
+      border: 1px solid var(--linha);
+      background: #fff;
+      color: var(--tinta);
+      border-radius: 6px;
+      padding: 7px 8px;
+      font: inherit;
+    }
+    button {
+      border: 0;
+      background: var(--tinta);
+      color: #fff;
+      border-radius: 6px;
+      padding: 8px 12px;
+      font: inherit;
+      cursor: pointer;
+    }
+    button:disabled { opacity: 0.55; cursor: wait; }
+    button.claro { background: transparent; color: var(--tinta); border: 1px solid var(--linha); }
+    a.atalho {
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid var(--linha);
+      border-radius: 6px;
+      padding: 8px 12px;
+      color: var(--tinta);
+      text-decoration: none;
+      background: transparent;
+    }
+    main { display: grid; grid-template-columns: 360px 1fr; min-height: 0; }
+    aside {
+      background: var(--papel);
+      border-right: 1px solid var(--linha);
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      padding: 12px;
+      border-bottom: 1px solid var(--linha);
+    }
+    .stat { background: var(--fundo); border-radius: 8px; padding: 8px; }
+    .stat b { display: block; font-size: 18px; }
+    .stat span { color: var(--muted); font-size: 11px; }
+    #lista { overflow: auto; padding: 6px 8px 16px; }
+    .item {
+      width: 100%;
+      text-align: left;
+      background: transparent;
+      color: var(--tinta);
+      border-radius: 8px;
+      padding: 10px;
+      margin-top: 4px;
+    }
+    .item.ativo, .item:hover { background: #efe8da; }
+    .item .topo { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+    .placa { font-weight: 700; }
+    .pct { font-variant-numeric: tabular-nums; font-weight: 700; }
+    .sub { color: var(--muted); font-size: 12px; margin-top: 2px; }
+    .barra { height: 6px; background: #e7e1d6; border-radius: 99px; margin-top: 8px; overflow: hidden; }
+    .barra i { display: block; height: 100%; }
+    .tag {
+      display: inline-block;
+      font-size: 11px;
+      padding: 1px 6px;
+      border-radius: 99px;
+      background: #ece7dc;
+      color: var(--tinta);
+    }
+    .tag.feita { background: #e5f4ec; color: var(--verde); }
+    .tag.parcial { background: #fff4d8; color: var(--ambar); }
+    .tag.nao { background: #fde8e6; color: var(--vermelho); }
+    #mapa { height: 100%; min-height: 420px; }
+    .legenda {
+      position: absolute;
+      z-index: 500;
+      left: 12px;
+      bottom: 12px;
+      background: var(--papel);
+      border: 1px solid var(--linha);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 12px;
+    }
+    .legenda div { display: flex; align-items: center; gap: 6px; margin: 3px 0; }
+    .sw { width: 18px; height: 4px; border-radius: 99px; }
+    #status { color: var(--muted); font-size: 12px; max-width: 280px; }
+    .abas { display: flex; gap: 6px; padding: 10px 12px 0; }
+    .abas button { background: transparent; color: var(--tinta); border: 1px solid var(--linha); }
+    .abas button.ativo { background: var(--tinta); color: #fff; }
+    .busca { display: flex; gap: 6px; padding: 10px 12px; border-bottom: 1px solid var(--linha); }
+    .busca input { flex: 1; }
+    .ficha { padding: 10px 12px; color: var(--tinta); font-size: 13px; border-bottom: 1px solid var(--linha); }
+    .ficha p { margin: 0 0 6px; }
+    @media (max-width: 860px) {
+      main { grid-template-columns: 1fr; grid-template-rows: 280px 1fr; }
+      aside { border-right: 0; border-bottom: 1px solid var(--linha); }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Sagtrack · Aparecida de Goiânia</h1>
+      <p id="periodo">Trajeto do dia e percentual da rota oficial</p>
+    </div>
+    <div class="controles">
+      <label>Data início <input id="data" type="date" /></label>
+      <label>Hora início <input id="hora-inicio" type="time" value="06:00" /></label>
+      <label>Data fim <input id="data-fim" type="date" /></label>
+      <label>Hora fim <input id="hora-fim" type="time" value="05:59" /></label>
+      <button id="atualizar" type="button">Atualizar frota</button>
+      <a class="atalho" href="whatsapp.html">WhatsApp</a>
+      <div id="status"></div>
+    </div>
+  </header>
+  <main>
+    <aside>
+      <div class="abas">
+        <button type="button" id="aba-frota" class="ativo">Frota</button>
+        <button type="button" id="aba-rota">Rota</button>
+        <button type="button" id="aba-placa">Placa</button>
+      </div>
+      <div class="busca" id="busca" hidden>
+        <input id="consulta" placeholder="Código da rota ou placa" />
+        <button type="button" id="buscar">Buscar</button>
+      </div>
+      <div class="ficha" id="ficha"></div>
+      <div class="stats">
+        <div class="stat"><b id="n-frota">–</b><span>caminhões</span></div>
+        <div class="stat"><b id="n-media">–</b><span id="rotulo-media">média da rota</span></div>
+        <div class="stat"><b id="n-feitas">–</b><span id="rotulo-feitas">feitas / parciais</span></div>
+      </div>
+      <div id="lista"></div>
+    </aside>
+    <div style="position:relative; min-height:0;">
+      <div id="mapa"></div>
+      <div class="legenda">
+        <div><i class="sw" style="background:#1d4e89"></i> <span id="leg-traco">trajeto real do dia</span></div>
+        <div><i class="sw" style="background:#8a6a12"></i> polígono oficial da rota</div>
+        <div id="leg-feitas" hidden><i class="sw" style="background:#0f7a44"></i> ruas feitas nesta rota</div>
+        <div id="leg-faltando" hidden><i class="sw" style="background:#b42318"></i> ruas que faltam nesta rota</div>
+        <div><i class="sw" style="background:#c2410c;height:8px;border-radius:99px"></i> parada dentro da rota</div>
+        <div><i class="sw" style="background:#0f766e"></i> base, saída do turno</div>
+        <div><i class="sw" style="background:#9a3412"></i> aterro, descarga</div>
+      </div>
+    </div>
+  </main>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="config.js"></script>
+  <script>
+    const mapa = L.map("mapa").setView([-16.82, -49.24], 12);
+    L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}", {
+      attribution: "Esri",
+      maxZoom: 19
+    }).addTo(mapa);
+    let grupo = L.layerGroup().addTo(mapa);
+    let locaisLayer = L.layerGroup().addTo(mapa);
+    let resumo = null;
+    let setoresDia = [];
+    let ativo = null;
+    let modo = "frota";
+    let timer = null;
+    const API = String(window.SAGTRACK_API || "").replace(/\/$/, "");
+    function api(caminho) {
+      return API + caminho;
+    }
+
+    const hoje = new Date();
+    const iso = new Date(hoje.getTime() - hoje.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+    document.getElementById("data").value = iso;
+
+    function somarDia(valor, dias) {
+      const data = new Date(valor + "T12:00:00");
+      data.setDate(data.getDate() + dias);
+      return new Date(data.getTime() - data.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+    }
+    function ajustarDataFim() {
+      const inicio = document.getElementById("data").value;
+      const horaInicio = document.getElementById("hora-inicio").value;
+      const horaFim = document.getElementById("hora-fim").value;
+      if (!inicio) return;
+      const cruza = horaInicio && horaFim && horaInicio > horaFim;
+      document.getElementById("data-fim").value = cruza ? somarDia(inicio, 1) : inicio;
+    }
+    ajustarDataFim();
+
+    function corPct(pct) {
+      if (pct >= 90) return "#1f7a4d";
+      if (pct >= 45) return "#a56b00";
+      return "#b42318";
+    }
+    function classe(ver) {
+      const v = String(ver || "").toUpperCase();
+      if (v === "FEITA") return "feita";
+      if (v === "PARCIAL") return "parcial";
+      if (v.includes("NÃO") || v.includes("NAO") || v === "SEM COLETA") return "nao";
+      return "";
+    }
+    function rotulo(ver) {
+      const v = String(ver || "").toUpperCase();
+      if (v === "FEITA") return "Feita";
+      if (v === "PARCIAL") return "Parcial";
+      if (v.includes("NÃO") || v.includes("NAO")) return "Não feita";
+      if (v === "PASSAGEM") return "Passagem";
+      if (v === "SEM RASTREIO") return "Sem rastreio";
+      if (v === "SEM COLETA") return "Sem coleta";
+      return ver || "Sem coleta";
+    }
+    function num(v) {
+      const n = Number(v);
+      return Number.isFinite(n) ? n : 0;
+    }
+    function esc(t) {
+      return String(t == null ? "" : t).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+    }
+    function linha(pts, opt) {
+      if (!pts || pts.length < 2) return;
+      grupo.addLayer(L.polyline(pts, opt));
+    }
+    function poligono(anel, opt) {
+      if (!anel || anel.length < 4) return null;
+      const poly = L.polygon(anel, opt);
+      grupo.addLayer(poly);
+      return poly;
+    }
+    function marcarSaida(saida) {
+      if (!saida || saida.latitude == null) return null;
+      const m = L.circleMarker([saida.latitude, saida.longitude], {
+        radius: 7, color: "#1f7a4d", fillColor: "#1f7a4d", fillOpacity: 1, weight: 2
+      });
+      m.bindPopup("Saída · primeiro pulso<br>" + (saida.timestamp || ""));
+      grupo.addLayer(m);
+      return m;
+    }
+    const CORES_COLETA = ["#c2410c", "#1f7a4d", "#1d4e89", "#7c3aed", "#a56b00", "#0f766e"];
+    function marcarParadas(pontos, rota, cor) {
+      const marcas = [];
+      (pontos || []).forEach((p) => {
+        if (p.latitude == null) return;
+        const m = L.circleMarker([p.latitude, p.longitude], {
+          radius: 6, color: "#fff", weight: 2, fillColor: cor || "#c2410c", fillOpacity: 1
+        });
+        const min = Math.round((p.segundos || 0) / 60);
+        const hora = p.inicio ? p.inicio + "–" + (p.fim || "") : "";
+        m.bindPopup("<b>" + (rota || "Parada de coleta") + "</b>" + (hora ? "<br>" + hora : "") + (min ? "<br>" + min + " min" : ""));
+        grupo.addLayer(m);
+        marcas.push(m);
+      });
+      return marcas;
+    }
+    function rotasComColeta(caminhao) {
+      return (caminhao.tocados || []).filter((t) => t.papel === "ATUANDO" || t.papel === "APOIO");
+    }
+    function fichaColeta(caminhao) {
+      const coleta = rotasComColeta(caminhao);
+      const nome = caminhao.prefixo ? caminhao.prefixo + " · " + (caminhao.placa || "") : (caminhao.placa || "Caminhão");
+      const linhas = [nome, coleta.length ? "Rotas em que houve coleta:" : "Nenhuma parada de coleta dentro de rota."];
+      coleta.forEach((t) => {
+        const papel = t.papel === "ATUANDO" ? "Atuou" : "Apoio";
+        const turno = t.turno ? String(t.turno).toLowerCase() : (t.frequencia || "");
+        linhas.push(papel + " · " + turno + " · " + (t.setor || t.codigo || "") + " · " + (t.paradas || 0) + " pontos · " + num(t.percentual).toFixed(1).replace(".", ",") + "%");
+      });
+      ficha(linhas);
+    }
+    function aneisDe(item) {
+      if (item.poligonos && item.poligonos.length) return item.poligonos;
+      return item.poligono && item.poligono.length ? [item.poligono] : [];
+    }
+    function desenharColeta(caminhao, foco) {
+      rotasComColeta(caminhao).forEach((t, i) => {
+        const cor = CORES_COLETA[i % CORES_COLETA.length];
+        aneisDe(t).forEach((anel) => {
+          const poly = poligono(anel, { color: cor, weight: 3, fillColor: cor, fillOpacity: 0.12 });
+          if (!poly) return;
+          poly.bindPopup("<b>" + (t.setor || t.codigo || "") + "</b><br>" + (t.paradas || 0) + " paradas dentro do polígono");
+          foco.push(poly);
+        });
+        marcarParadas(t.paradas_pontos, t.setor || t.codigo, cor).forEach((m) => foco.push(m));
+      });
+    }
+    function desenharLocais(locais) {
+      locaisLayer.clearLayers();
+      (locais || []).forEach((local) => {
+        const cor = local.cor || "#0f766e";
+        (local.aneis || []).forEach((anel) => {
+          if (!anel || anel.length < 4) return;
+          const poly = L.polygon(anel, {
+            color: cor,
+            weight: 3,
+            fillColor: cor,
+            fillOpacity: 0.22
+          });
+          poly.bindPopup("<b>" + esc(local.nome) + "</b><br>" + esc(local.descricao || ""));
+          locaisLayer.addLayer(poly);
+        });
+      });
+    }
+    fetch(api("/api/locais")).then((r) => r.json()).then((corpo) => desenharLocais(corpo.locais || [])).catch(() => {});
+    function desenhar(caminhao) {
+      grupo.clearLayers();
+      const lista = caminhao ? [caminhao] : ((resumo && resumo.caminhoes) || []);
+      const foco = [];
+      lista.forEach((c) => {
+        (c.gps || []).forEach((pts) => {
+          linha(pts, { color: "#ffffff", weight: caminhao ? 8 : 5, opacity: 0.85 });
+          const layer = L.polyline(pts, { color: "#1d4e89", weight: caminhao ? 4 : 3, opacity: 0.9 });
+          grupo.addLayer(layer);
+          foco.push(layer);
+        });
+        const saida = marcarSaida(c.saida);
+        if (saida) foco.push(saida);
+        desenharColeta(c, foco);
+      });
+      if (foco.length) mapa.fitBounds(L.featureGroup(foco).getBounds(), { padding: [28, 28], maxZoom: caminhao ? 16 : 13 });
+    }
+    function trilhas(lista, opt, foco) {
+      (lista || []).forEach((pts) => {
+        if (!pts || pts.length < 2) return;
+        const layer = L.polyline(pts, opt);
+        grupo.addLayer(layer);
+        foco.push(layer);
+      });
+    }
+    function desenharRelatorio(rel, placa) {
+      grupo.clearLayers();
+      const foco = [];
+      const rota = modo === "rota";
+      const caminhao = placa ? (rel.caminhoes || []).find((c) => c.placa === placa) : null;
+      const setor = (rel.setores || [])[0];
+      const faltando = caminhao ? caminhao.faltando : (setor && setor.faltando);
+      const feitos = caminhao ? caminhao.feitos : (setor && setor.feitos);
+      document.getElementById("leg-feitas").hidden = !rota;
+      document.getElementById("leg-faltando").hidden = !rota;
+      document.getElementById("leg-traco").textContent = rota ? "trajeto nesta rota" : "trajeto real do dia";
+      if (rota) {
+        trilhas(faltando, { color: "#b42318", weight: 4, opacity: 0.85 }, foco);
+        trilhas(feitos, { color: "#0f7a44", weight: 5, opacity: 0.95 }, foco);
+      }
+      (rel.setores || []).forEach((item) => {
+        const papel = item.papel || "";
+        (item.poligonos || []).forEach((anel) => {
+          const poly = poligono(anel, {
+            color: papel === "PASSAGEM" ? "#94a3b8" : "#8a6a12",
+            weight: papel === "ATUANDO" || !papel ? 3 : 1.5,
+            dashArray: papel && papel !== "ATUANDO" ? "7 6" : null,
+            fillColor: "#e6c35c",
+            fillOpacity: rota ? 0.05 : (papel === "PASSAGEM" ? 0.04 : 0.14)
+          });
+          if (poly) {
+            poly.bindPopup("<b>" + esc(item.codigo || item.nome || "") + "</b>");
+            foco.push(poly);
+          }
+        });
+      });
+      const caminhoes = caminhao ? [caminhao] : (rel.caminhoes || []);
+      caminhoes.forEach((c) => {
+        if (rota && !caminhao && c.papel !== "ATUANDO" && c.papel !== "APOIO") return;
+        const passagem = c.papel === "PASSAGEM";
+        (c.gps || []).forEach((pts) => {
+          const layer = L.polyline(pts, {
+            color: passagem ? "#64748b" : "#1d4e89",
+            weight: passagem ? 2 : 4,
+            opacity: passagem ? 0.55 : 0.9
+          });
+          grupo.addLayer(layer);
+          foco.push(layer);
+        });
+        if (!passagem) marcarParadas(c.paradas_pontos, (setor && (setor.codigo + " " + (setor.nome || ""))) || c.placa, "#c2410c").forEach((m) => foco.push(m));
+        const saida = marcarSaida(c.saida);
+        if (saida && !rota) foco.push(saida);
+      });
+      if (foco.length) mapa.fitBounds(L.featureGroup(foco).getBounds(), { padding: [28, 28], maxZoom: 16 });
+      else mapa.setView([-16.82, -49.24], 12);
+    }
+    function ficha(linhas) {
+      const box = document.getElementById("ficha");
+      const esc = (t) => String(t).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+      box.innerHTML = (linhas || []).map((t) => "<p>" + esc(t) + "</p>").join("");
+    }
+    function pintar() {
+      const box = document.getElementById("lista");
+      const caminhoes = (resumo && resumo.caminhoes) || [];
+      document.getElementById("periodo").textContent = resumo && resumo.periodo
+        ? resumo.periodo + " · percentual = km feito nas ruas oficiais do setor"
+        : "Trajeto do dia e percentual da rota oficial";
+      document.getElementById("n-frota").textContent = resumo ? String(resumo.frota || caminhoes.length) : "–";
+      document.getElementById("n-media").textContent = resumo && resumo.media != null
+        ? num(resumo.media).toFixed(1).replace(".", ",") + "%"
+        : "–";
+      document.getElementById("rotulo-media").textContent = "média da rota";
+      document.getElementById("n-feitas").textContent = resumo
+        ? (resumo.feitas || 0) + " / " + (resumo.parciais || 0)
+        : "–";
+      document.getElementById("rotulo-feitas").textContent = "feitas / parciais";
+      const balanco = (modo === "frota" && resumo && resumo.balanco) || [];
+      if (balanco.length) {
+        const feitasDia = balanco.filter((r) => r.situacao === "Feita").length;
+        const naoDia = balanco.filter((r) => r.situacao === "Não feita").length;
+        document.getElementById("n-media").textContent = String(feitasDia);
+        document.getElementById("rotulo-media").textContent = "rotas feitas";
+        document.getElementById("n-feitas").textContent = String(naoDia);
+        document.getElementById("rotulo-feitas").textContent = "não feitas";
+      }
+      box.innerHTML = "";
+      if (!caminhoes.length) {
+        box.innerHTML = "<p class='sub' style='padding:12px'>Nenhum dia carregado. Escolha a data e atualize a frota.</p>";
+        return;
+      }
+      caminhoes.forEach((c, i) => {
+        const pct = num(c.percentual);
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "item" + (ativo === i ? " ativo" : "");
+        btn.innerHTML =
+          "<div class='topo'><span class='placa'>" + (c.prefixo ? c.prefixo + " · " + (c.placa || "") : (c.placa || "—")) + "</span>" +
+          "<span class='pct' style='color:" + corPct(pct) + "'>" + pct.toFixed(1).replace(".", ",") + "%</span></div>" +
+          "<div class='sub'>" + (c.veiculo || "") + "</div>" +
+          "<div class='sub'>" + (c.setor || "Sem setor identificado") + (c.paradas ? " · " + c.paradas + " paradas" : "") + "</div>" +
+          "<div style='margin-top:6px'><span class='tag " + classe(c.veredicto) + "'>" + rotulo(c.veredicto) + "</span></div>" +
+          "<div class='barra'><i style='width:" + Math.max(0, Math.min(100, pct)) + "%;background:" + corPct(pct) + "'></i></div>";
+        btn.onclick = () => {
+          ativo = i;
+          pintar();
+          fichaColeta(c);
+          desenhar(c);
+        };
+        box.appendChild(btn);
+      });
+    }
+    async function carregarDia(data) {
+      const r = await fetch(api("/api/dia?data=" + encodeURIComponent(data)));
+      const corpo = await r.json();
+      const rel = await fetch(api("/api/relatorio?tipo=frota&data=" + encodeURIComponent(data)));
+      const frota = await rel.json();
+      if (corpo && corpo.caminhoes) {
+        resumo = corpo;
+        if (frota && frota.caminhoes && frota.caminhoes.length) resumo.caminhoes = frota.caminhoes;
+        resumo.balanco = (frota && frota.balanco) || [];
+        setoresDia = (frota && frota.setores) || [];
+        ativo = null;
+        modo = "frota";
+        document.querySelectorAll(".abas button").forEach((b) => b.classList.remove("ativo"));
+        document.getElementById("aba-frota").classList.add("ativo");
+        document.getElementById("busca").hidden = true;
+        ficha(frota.texto || []);
+        pintar();
+        desenhar(null);
+      }
+    }
+    function pintarCandidatos(rel) {
+      const box = document.getElementById("lista");
+      box.innerHTML = "";
+      (rel.candidatos || []).forEach((c) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "item";
+        btn.innerHTML =
+          "<div class='topo'><span class='placa'>" + esc(c.codigo) + "</span></div>" +
+          "<div class='sub'>" + esc(c.nome || "") + "</div>" +
+          "<div class='sub'>" + esc(c.frequencia || "") + "</div>";
+        btn.onclick = () => {
+          document.getElementById("consulta").value = c.codigo || "";
+          buscar();
+        };
+        box.appendChild(btn);
+      });
+    }
+    function pintarRota(rel) {
+      const box = document.getElementById("lista");
+      box.innerHTML = "";
+      const setor = (rel.setores || [])[0];
+      if (!setor) {
+        box.innerHTML = "<p class='sub' style='padding:12px'>" + esc((rel.texto || ["Nenhuma rota encontrada."])[0]) + "</p>";
+        return;
+      }
+      const pct = num(rel.percentual);
+      const coletando = (rel.caminhoes || []).filter((c) => c.papel === "ATUANDO" || c.papel === "APOIO");
+      const cab = document.createElement("button");
+      cab.type = "button";
+      cab.className = "item" + (ativo == null ? " ativo" : "");
+      cab.innerHTML =
+        "<div class='topo'><span class='placa'>" + esc(setor.codigo || "") + "</span>" +
+        "<span class='pct' style='color:" + corPct(pct) + "'>" + pct.toFixed(1).replace(".", ",") + "%</span></div>" +
+        "<div class='sub'>" + esc(setor.nome || "") + "</div>" +
+        "<div style='margin-top:6px'><span class='tag " + classe(rel.conclusao) + "'>" + esc(rotulo(rel.conclusao)) + "</span></div>" +
+        "<div class='barra'><i style='width:" + Math.max(0, Math.min(100, pct)) + "%;background:" + corPct(pct) + "'></i></div>";
+      cab.onclick = () => {
+        ativo = null;
+        pintarRota(rel);
+        desenharRelatorio(rel);
+      };
+      box.appendChild(cab);
+      coletando.forEach((c, i) => {
+        const p = num(c.percentual);
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "item" + (ativo === i ? " ativo" : "");
+        btn.innerHTML =
+          "<div class='topo'><span class='placa'>" + esc(c.prefixo ? c.prefixo + " · " + (c.placa || "") : (c.placa || "—")) + "</span>" +
+          "<span class='pct' style='color:" + corPct(p) + "'>" + p.toFixed(1).replace(".", ",") + "%</span></div>" +
+          "<div class='sub'>Nesta rota · " + (c.paradas || 0) + " paradas</div>" +
+          "<div style='margin-top:6px'><span class='tag " + classe(p >= 90 ? "FEITA" : (p >= 45 ? "PARCIAL" : "NÃO FEITA")) + "'>" +
+          esc(c.papel === "ATUANDO" ? "Atuou" : "Apoio") + "</span></div>";
+        btn.onclick = () => {
+          ativo = i;
+          pintarRota(rel);
+          desenharRelatorio(rel, c.placa);
+        };
+        box.appendChild(btn);
+      });
+      if (!coletando.length) {
+        const vazio = document.createElement("p");
+        vazio.className = "sub";
+        vazio.style.padding = "12px";
+        vazio.textContent = "Nenhum caminhão fez coleta nesta rota.";
+        box.appendChild(vazio);
+      }
+    }
+    async function buscar() {
+      const data = document.getElementById("data").value;
+      const q = document.getElementById("consulta").value.trim();
+      if (modo !== "frota" && !q) return;
+      const url = api("/api/relatorio?tipo=") + encodeURIComponent(modo) + "&data=" + encodeURIComponent(data) + "&q=" + encodeURIComponent(q);
+      const rel = await (await fetch(url)).json();
+      ficha(rel.texto || []);
+      if (modo === "rota") {
+        const achou = rel.setores && rel.setores.length && !rel.ambiguo;
+        document.getElementById("n-media").textContent = achou && rel.percentual != null
+          ? num(rel.percentual).toFixed(1).replace(".", ",") + "%"
+          : "–";
+        document.getElementById("rotulo-media").textContent = achou ? "desta rota" : "média da rota";
+        ativo = null;
+        if (rel.ambiguo) {
+          pintarCandidatos(rel);
+          grupo.clearLayers();
+          return;
+        }
+        pintarRota(rel);
+        desenharRelatorio(rel);
+        return;
+      }
+      if (modo === "frota") {
+        setoresDia = rel.setores || [];
+        if (rel.caminhoes) {
+          resumo = resumo || {};
+          resumo.caminhoes = rel.caminhoes;
+        }
+        if (rel.balanco) {
+          resumo = resumo || {};
+          resumo.balanco = rel.balanco;
+        }
+        pintar();
+        desenhar(null);
+      } else {
+        desenharRelatorio(rel);
+      }
+    }
+    function aba(nome) {
+      modo = nome;
+      document.querySelectorAll(".abas button").forEach((b) => b.classList.remove("ativo"));
+      document.getElementById("aba-" + nome).classList.add("ativo");
+      const busca = document.getElementById("busca");
+      const campo = document.getElementById("consulta");
+      busca.hidden = nome === "frota";
+      campo.placeholder = nome === "placa" ? "Placa, ex. SDG-1J76" : "Rota, ex. 60DN ou Esmeralda";
+      document.getElementById("leg-feitas").hidden = true;
+      document.getElementById("leg-faltando").hidden = true;
+      document.getElementById("leg-traco").textContent = "trajeto real do dia";
+      if (nome === "frota") {
+        carregarDia(document.getElementById("data").value);
+        return;
+      }
+      document.getElementById("rotulo-media").textContent = "média da rota";
+      document.getElementById("rotulo-feitas").textContent = "feitas / parciais";
+      document.getElementById("n-media").textContent = resumo && resumo.media != null
+        ? num(resumo.media).toFixed(1).replace(".", ",") + "%"
+        : "–";
+      document.getElementById("n-feitas").textContent = resumo
+        ? (resumo.feitas || 0) + " / " + (resumo.parciais || 0)
+        : "–";
+      ativo = null;
+      document.getElementById("lista").innerHTML = "<p class='sub' style='padding:12px'>Digite a rota e busque para ver no mapa o que foi feito.</p>";
+      document.getElementById("ficha").innerHTML = "";
+      grupo.clearLayers();
+    }
+    async function poll() {
+      const r = await fetch(api("/api/progresso"));
+      const corpo = await r.json();
+      const msgs = corpo.mensagens || [];
+      document.getElementById("status").textContent = msgs.length ? msgs[msgs.length - 1] : "";
+      document.getElementById("atualizar").disabled = !!corpo.rodando;
+      if (corpo.rodando) {
+        timer = setTimeout(poll, 1500);
+        return;
+      }
+      timer = null;
+      if (!corpo.erro && corpo.data) await carregarDia(corpo.data);
+    }
+    document.getElementById("atualizar").onclick = async () => {
+      const data = document.getElementById("data").value;
+      document.getElementById("atualizar").disabled = true;
+      document.getElementById("status").textContent = "Pedindo os pulsos...";
+      const r = await fetch(api("/api/coletar"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          data: data,
+          data_fim: document.getElementById("data-fim").value,
+          hora_inicio: document.getElementById("hora-inicio").value,
+          hora_fim: document.getElementById("hora-fim").value
+        })
+      });
+      if (r.status === 409) {
+        document.getElementById("status").textContent = "A coleta deste dia já está rodando.";
+      }
+      if (timer) clearTimeout(timer);
+      poll();
+    };
+    document.getElementById("aba-frota").onclick = () => aba("frota");
+    document.getElementById("aba-rota").onclick = () => aba("rota");
+    document.getElementById("aba-placa").onclick = () => aba("placa");
+    document.getElementById("buscar").onclick = buscar;
+    document.getElementById("consulta").addEventListener("keydown", (ev) => {
+      if (ev.key === "Enter") buscar();
+    });
+    document.getElementById("data").onchange = () => {
+      ajustarDataFim();
+      carregarDia(document.getElementById("data").value);
+    };
+    document.getElementById("hora-inicio").onchange = ajustarDataFim;
+    document.getElementById("hora-fim").onchange = ajustarDataFim;
+    fetch(api("/api/ultimo")).then((r) => r.json()).then((corpo) => {
+      if (corpo && corpo.data) {
+        document.getElementById("data").value = corpo.data;
+        ajustarDataFim();
+        resumo = corpo;
+        pintar();
+        desenhar(null);
+      }
+    });
+  </script>
+</body>
+</html>
