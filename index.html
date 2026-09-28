@@ -87,7 +87,7 @@
     .stat { background: var(--fundo); border-radius: 8px; padding: 8px; }
     .stat b { display: block; font-size: 18px; }
     .stat span { color: var(--muted); font-size: 11px; }
-    #lista { overflow: auto; padding: 6px 8px 16px; }
+    #lista { flex: 1; min-height: 0; overflow: auto; padding: 6px 8px 16px; }
     .item {
       width: 100%;
       text-align: left;
@@ -135,8 +135,9 @@
     .abas button.ativo { background: var(--tinta); color: #fff; }
     .busca { display: flex; gap: 6px; padding: 10px 12px; border-bottom: 1px solid var(--linha); }
     .busca input { flex: 1; }
-    .ficha { padding: 10px 12px; color: var(--tinta); font-size: 13px; border-bottom: 1px solid var(--linha); }
+    .ficha { flex: 0 1 auto; max-height: 34%; overflow: auto; padding: 10px 12px; color: var(--tinta); font-size: 13px; border-bottom: 1px solid var(--linha); }
     .ficha p { margin: 0 0 6px; }
+    .ficha summary { cursor: pointer; color: var(--muted); font-size: 12px; }
     @media (max-width: 860px) {
       main { grid-template-columns: 1fr; grid-template-rows: 280px 1fr; }
       aside { border-right: 0; border-bottom: 1px solid var(--linha); }
@@ -421,7 +422,17 @@
     function ficha(linhas) {
       const box = document.getElementById("ficha");
       const esc = (t) => String(t).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
-      box.innerHTML = (linhas || []).map((t) => "<p>" + esc(t) + "</p>").join("");
+      const itens = linhas || [];
+      const html = (parte) => parte.map((t) => "<p>" + esc(t) + "</p>").join("");
+      const decisao = itens.length > 2 && String(itens[0] || "").indexOf("Decisão da frota") === 0;
+      if (!decisao) {
+        box.innerHTML = html(itens);
+        return;
+      }
+      box.innerHTML = html(itens.slice(0, 2))
+        + "<details><summary>Ver decisão completa</summary>"
+        + html(itens.slice(2))
+        + "</details>";
     }
     function pintar() {
       const box = document.getElementById("lista");
