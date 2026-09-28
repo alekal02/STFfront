@@ -51,7 +51,7 @@
       <div id="cadeado" class="cadeado" hidden>
         <b>Grupo travado</b>
         <p id="grupo-atual"></p>
-        <p class="muted">A Segtrack só lê mensagens deste grupo. Os outros grupos ficam de fora.</p>
+        <p class="muted">A Segtrack só lê mensagens deste grupo. Ele continua o mesmo depois que a página fecha ou o servidor reinicia.</p>
         <button type="button" id="trocar" class="claro">Trocar grupo</button>
       </div>
       <div id="escolha">
@@ -88,13 +88,22 @@
     const grupoAtual = document.getElementById("grupo-atual");
     const cadeado = document.getElementById("cadeado");
     const escolha = document.getElementById("escolha");
+    const CHAVE_GRUPO = "segtrack-grupo";
+    let ocupado = false;
+    let pediuQr = false;
+    let restaurouGrupo = false;
     function imagemQr(corpo) {
       const bruto = corpo && (corpo.QRCode || corpo.qrcode || corpo.Qrcode || corpo.qr || "");
       if (typeof bruto === "string" && bruto.startsWith("data:image")) return bruto;
       return "";
     }
+    function gravarGrupoLocal(jid, nome) {
+      if (!jid) return;
+      localStorage.setItem(CHAVE_GRUPO, JSON.stringify({ jid: jid, nome: nome || "" }));
+    }
     function mostrarGrupo(corpo) {
       if (corpo.travado && corpo.grupo) {
+        gravarGrupoLocal(corpo.grupo, corpo.grupo_nome);
         grupoAtual.textContent = (corpo.grupo_nome || "Grupo selecionado") + " · " + corpo.grupo;
         cadeado.hidden = false;
         escolha.hidden = true;
@@ -103,35 +112,60 @@
       cadeado.hidden = true;
       escolha.hidden = false;
     }
+    async function restaurarGrupo(corpo) {
+      if (corpo.grupo || restaurouGrupo) return corpo;
+      restaurouGrupo = true;
+      let salvo = null;
+      try { salvo = JSON.parse(localStorage.getItem(CHAVE_GRUPO) || "null"); } catch (e) { salvo = null; }
+      if (!salvo || !salvo.jid) return corpo;
+      await fetch(api("/api/whatsapp/configuracao"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ group_jid: salvo.jid, group_nome: salvo.nome || "" })
+      });
+      return await (await fetch(api("/api/whatsapp/status"))).json();
+    }
     async function atualizar() {
-      const corpo = await (await fetch(api("/api/whatsapp/status"))).json();
-      mostrarGrupo(corpo);
-      if (corpo.erro) {
+      if (ocupado) return;
+      ocupado = true;
+      try {
+        let corpo = await (await fetch(api("/api/whatsapp/status"))).json();
+        corpo = await restaurarGrupo(corpo);
+        mostrarGrupo(corpo);
+        if (corpo.pareado) {
+          pediuQr = false;
+          qr.hidden = true;
+          estado.textContent = corpo.conectado ? "Conectado" : "Pausado";
+          estado.className = corpo.conectado ? "estado ok" : "estado off";
+          status.textContent = corpo.conectado
+            ? "A sessão da Segtrack está ativa no celular. Ela permanece vinculada, sem pedir outro QR."
+            : "O celular continua vinculado. Clique em Conectar para voltar, sem ler o QR de novo.";
+          conectarBtn.hidden = !!corpo.conectado;
+          desconectarBtn.hidden = !corpo.conectado;
+          return;
+        }
+        if (corpo.erro) {
+          estado.textContent = "Sem resposta";
+          estado.className = "estado off";
+          status.textContent = "Não consegui consultar a sessão agora. O vínculo do celular não foi desfeito.";
+          conectarBtn.hidden = false;
+          desconectarBtn.hidden = true;
+          return;
+        }
         estado.textContent = "Desconectado";
         estado.className = "estado off";
-        status.textContent = corpo.erro;
+        status.textContent = "WhatsApp da Segtrack está desconectado. Conecte para ler o QR.";
         conectarBtn.hidden = false;
         desconectarBtn.hidden = true;
-        return;
+        if (pediuQr) return;
+        pediuQr = true;
+        const codigo = await (await fetch(api("/api/whatsapp/qr"))).json();
+        const src = imagemQr(codigo);
+        qr.hidden = !src;
+        if (src) qr.src = src;
+      } finally {
+        ocupado = false;
       }
-      if (corpo.conectado) {
-        estado.textContent = "Conectado";
-        estado.className = "estado ok";
-        status.textContent = "A sessão da Segtrack está ativa. Os pedidos de PDF saem só do grupo travado.";
-        conectarBtn.hidden = true;
-        desconectarBtn.hidden = false;
-        qr.hidden = true;
-        return;
-      }
-      estado.textContent = "Desconectado";
-      estado.className = "estado off";
-      status.textContent = "WhatsApp da Segtrack está desconectado. Conecte para ler o QR.";
-      conectarBtn.hidden = false;
-      desconectarBtn.hidden = true;
-      const codigo = await (await fetch(api("/api/whatsapp/qr"))).json();
-      const src = imagemQr(codigo);
-      qr.hidden = !src;
-      if (src) qr.src = src;
     }
     document.getElementById("conectar").onclick = async () => {
       status.textContent = "Abrindo a sessão...";
@@ -164,6 +198,7 @@
       const jid = lista.value;
       if (!jid) return;
       const nome = lista.selectedOptions[0] ? lista.selectedOptions[0].textContent : "";
+      gravarGrupoLocal(jid, nome);
       await fetch(api("/api/whatsapp/configuracao"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -172,6 +207,7 @@
       atualizar();
     };
     atualizar();
+    setInterval(atualizar, 45000);
   </script>
 </body>
 </html>
