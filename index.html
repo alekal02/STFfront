@@ -437,8 +437,9 @@
     function pintar() {
       const box = document.getElementById("lista");
       const caminhoes = (resumo && resumo.caminhoes) || [];
+      const corte = resumo && resumo.congelado_em ? " · pulsos até " + String(resumo.congelado_em).slice(11, 16) : "";
       document.getElementById("periodo").textContent = resumo && resumo.periodo
-        ? resumo.periodo + " · percentual = km feito nas ruas oficiais do setor"
+        ? resumo.periodo + corte + " · percentual = km feito nas ruas oficiais do setor"
         : "Trajeto do dia e percentual da rota oficial";
       document.getElementById("n-frota").textContent = resumo ? String(resumo.frota || caminhoes.length) : "–";
       document.getElementById("n-media").textContent = resumo && resumo.media != null
@@ -656,7 +657,7 @@
     document.getElementById("atualizar").onclick = async () => {
       const data = document.getElementById("data").value;
       document.getElementById("atualizar").disabled = true;
-      document.getElementById("status").textContent = "Pedindo os pulsos...";
+      document.getElementById("status").textContent = "Horário congelado. Buscando os pulsos até agora...";
       const r = await fetch(api("/api/coletar"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
