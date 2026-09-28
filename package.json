@@ -1,5 +1,5 @@
 {
-  "name": "sagtrack-front",
+  "name": "segtrack-front",
   "private": true,
   "scripts": {
     "build": "node build.mjs"

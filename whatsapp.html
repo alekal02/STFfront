@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Sagtrack · WhatsApp</title>
+  <title>Segtrack · WhatsApp</title>
   <style>
     :root { --fundo: #f4f1ea; --papel: #fffdf8; --tinta: #1c2430; --muted: #5c6b7a; --linha: #e4ddd0; }
     * { box-sizing: border-box; }
@@ -33,7 +33,7 @@
   <header>
     <div>
       <h1>WhatsApp da frota</h1>
-      <p class="muted">Mesma API do Medzup. Esta sessão é só da Sagtrack.</p>
+      <p class="muted">Mesma API do Medzup. Esta sessão é só da Segtrack.</p>
     </div>
     <a href="index.html">Voltar ao mapa</a>
   </header>
@@ -51,7 +51,7 @@
       <div id="cadeado" class="cadeado" hidden>
         <b>Grupo travado</b>
         <p id="grupo-atual"></p>
-        <p class="muted">A Sagtrack só lê mensagens deste grupo. Os outros grupos ficam de fora.</p>
+        <p class="muted">A Segtrack só lê mensagens deste grupo. Os outros grupos ficam de fora.</p>
         <button type="button" id="trocar" class="claro">Trocar grupo</button>
       </div>
       <div id="escolha">
@@ -117,7 +117,7 @@
       if (corpo.conectado) {
         estado.textContent = "Conectado";
         estado.className = "estado ok";
-        status.textContent = "A sessão da Sagtrack está ativa. Os pedidos de PDF saem só do grupo travado.";
+        status.textContent = "A sessão da Segtrack está ativa. Os pedidos de PDF saem só do grupo travado.";
         conectarBtn.hidden = true;
         desconectarBtn.hidden = false;
         qr.hidden = true;
@@ -125,7 +125,7 @@
       }
       estado.textContent = "Desconectado";
       estado.className = "estado off";
-      status.textContent = "WhatsApp da Sagtrack está desconectado. Conecte para ler o QR.";
+      status.textContent = "WhatsApp da Segtrack está desconectado. Conecte para ler o QR.";
       conectarBtn.hidden = false;
       desconectarBtn.hidden = true;
       const codigo = await (await fetch(api("/api/whatsapp/qr"))).json();
