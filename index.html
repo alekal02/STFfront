@@ -184,7 +184,8 @@
     <div style="position:relative; min-height:0;">
       <div id="mapa"></div>
       <div class="legenda">
-        <div><i class="sw" style="background:#1d4e89"></i> <span id="leg-traco">trajeto real do dia</span></div>
+        <div id="leg-traco-linha"><i class="sw" style="background:#1d4e89"></i> <span id="leg-traco">trajeto real do dia</span></div>
+        <div id="legenda-caminhoes"></div>
         <div><i class="sw" style="background:#8a6a12"></i> polígono oficial da rota</div>
         <div id="leg-feitas" hidden><i class="sw" style="background:#0f7a44"></i> ruas feitas nesta rota</div>
         <div id="leg-faltando" hidden><i class="sw" style="background:#b42318"></i> ruas que faltam nesta rota</div>
@@ -346,6 +347,7 @@
     }
     fetch(api("/api/locais")).then((r) => r.json()).then((corpo) => desenharLocais(corpo.locais || [])).catch(() => {});
     function desenhar(caminhao) {
+      pintarLegendaCaminhoes([]);
       grupo.clearLayers();
       const lista = caminhao ? [caminhao] : ((resumo && resumo.caminhoes) || []);
       const foco = [];
@@ -369,6 +371,29 @@
         grupo.addLayer(layer);
         foco.push(layer);
       });
+    }
+    const CORES_CAMINHAO = ["#1d4e89", "#0f7a44", "#6d28d9", "#0e7490", "#9d174d"];
+    function caminhoesDaRota(rel) {
+      return ((rel && rel.caminhoes) || [])
+        .filter((c) => c.papel === "ATUANDO" || c.papel === "APOIO")
+        .sort((a, b) => (a.papel === "ATUANDO" ? 0 : 1) - (b.papel === "ATUANDO" ? 0 : 1));
+    }
+    function pintarLegendaCaminhoes(lista) {
+      const box = document.getElementById("legenda-caminhoes");
+      const linha = document.getElementById("leg-traco-linha");
+      if (!box) return;
+      if (!lista || !lista.length) {
+        box.innerHTML = "";
+        if (linha) linha.hidden = false;
+        return;
+      }
+      if (linha) linha.hidden = true;
+      box.innerHTML = lista.map((c, i) => {
+        const nome = (c.prefixo ? c.prefixo + " · " : "") + (c.placa || "caminhão");
+        const papel = c.papel === "ATUANDO" ? "atuou" : "apoio";
+        return "<div><i class='sw' style='background:" + CORES_CAMINHAO[i % CORES_CAMINHAO.length] + "'></i> "
+          + esc(nome) + " · " + papel + "</div>";
+      }).join("");
     }
     function desenharRelatorio(rel, placa) {
       grupo.clearLayers();
@@ -401,16 +426,22 @@
           }
         });
       });
+      const daRota = caminhoesDaRota(rel);
+      pintarLegendaCaminhoes(rota ? daRota : []);
       const caminhoes = caminhao ? [caminhao] : (rel.caminhoes || []);
       caminhoes.forEach((c) => {
         if (rota && !caminhao && c.papel !== "ATUANDO" && c.papel !== "APOIO") return;
         const passagem = c.papel === "PASSAGEM";
+        const indice = daRota.findIndex((item) => item.placa === c.placa);
+        const cor = passagem ? "#64748b" : CORES_CAMINHAO[(indice < 0 ? 0 : indice) % CORES_CAMINHAO.length];
+        const nome = (c.prefixo ? c.prefixo + " · " : "") + (c.placa || "");
         (c.gps || []).forEach((pts) => {
           const layer = L.polyline(pts, {
-            color: passagem ? "#64748b" : "#1d4e89",
-            weight: passagem ? 2 : 4,
-            opacity: passagem ? 0.55 : 0.9
+            color: cor,
+            weight: passagem ? 2 : 5,
+            opacity: passagem ? 0.55 : 0.95
           });
+          layer.bindPopup("<b>" + esc(nome) + "</b><br>" + (c.papel === "APOIO" ? "Apoio nesta rota" : "Atuou nesta rota"));
           grupo.addLayer(layer);
           foco.push(layer);
         });
@@ -558,7 +589,8 @@
         btn.innerHTML =
           "<div class='topo'><span class='placa'>" + esc(c.prefixo ? c.prefixo + " · " + (c.placa || "") : (c.placa || "—")) + "</span>" +
           "<span class='pct' style='color:" + corPct(p) + "'>" + p.toFixed(1).replace(".", ",") + "%</span></div>" +
-          "<div class='sub'>Nesta rota · " + (c.paradas || 0) + " paradas</div>" +
+          "<div class='sub'>Nesta rota · " + (c.paradas || 0) + " paradas"
+          + (c.papel === "APOIO" && c.pulsos ? " · " + c.pulsos + " pulsos" : "") + "</div>" +
           "<div style='margin-top:6px'><span class='tag " + classe(p >= 90 ? "FEITA" : (p >= 45 ? "PARCIAL" : "NÃO FEITA")) + "'>" +
           esc(c.papel === "ATUANDO" ? "Atuou" : "Apoio") + "</span></div>";
         btn.onclick = () => {
