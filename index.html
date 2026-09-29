@@ -320,7 +320,7 @@
         aneisDe(t).forEach((anel) => {
           const poly = poligono(anel, { color: cor, weight: 3, fillColor: cor, fillOpacity: 0.12 });
           if (!poly) return;
-          poly.bindPopup("<b>" + (t.setor || t.codigo || "") + "</b><br>" + (t.paradas || 0) + " paradas dentro do polígono");
+          poly.bindPopup("<b>" + (t.setor || t.codigo || "") + "</b><br>" + (t.paradas || 0) + " paradas na rua da rota");
           foco.push(poly);
         });
         marcarParadas(t.paradas_pontos, t.setor || t.codigo, cor).forEach((m) => foco.push(m));
@@ -344,11 +344,28 @@
       });
     }
     fetch(api("/api/locais")).then((r) => r.json()).then((corpo) => desenharLocais(corpo.locais || [])).catch(() => {});
+    function desenharRotasDoDia(foco) {
+      (setoresDia || []).forEach((item) => {
+        (item.poligonos || []).forEach((anel) => {
+          const poly = poligono(anel, {
+            color: "#8a6a12",
+            weight: 2,
+            fillColor: "#e6c35c",
+            fillOpacity: 0.08
+          });
+          if (!poly) return;
+          const turno = item.turno ? "<br>" + esc(String(item.turno).toLowerCase()) : "";
+          poly.bindPopup("<b>" + esc(item.codigo || "") + " " + esc(item.nome || "") + "</b>" + turno);
+          foco.push(poly);
+        });
+      });
+    }
     function desenhar(caminhao) {
       pintarLegendaCaminhoes([]);
       grupo.clearLayers();
       const lista = caminhao ? [caminhao] : ((resumo && resumo.caminhoes) || []);
       const foco = [];
+      desenharRotasDoDia(foco);
       lista.forEach((c) => {
         (c.gps || []).forEach((pts) => {
           linha(pts, { color: "#ffffff", weight: caminhao ? 8 : 5, opacity: 0.85 });
