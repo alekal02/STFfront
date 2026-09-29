@@ -157,7 +157,7 @@
       <label>Data fim <input id="data-fim" type="date" /></label>
       <label>Hora fim <input id="hora-fim" type="time" value="05:59" /></label>
       <button id="atualizar" type="button">Atualizar frota</button>
-      <span class="dica">Atualiza sozinha a cada 15 min</span>
+      <span class="dica">Consulta automática pausada</span>
       <a class="atalho" href="whatsapp.html">WhatsApp</a>
       <div id="status"></div>
     </div>
@@ -704,6 +704,14 @@
       });
       if (r.status === 409) {
         document.getElementById("status").textContent = "A coleta deste dia já está rodando.";
+        document.getElementById("atualizar").disabled = false;
+        return;
+      }
+      if (!r.ok) {
+        const corpo = await r.json().catch(() => ({}));
+        document.getElementById("status").textContent = corpo.erro || "Consulta pausada.";
+        document.getElementById("atualizar").disabled = false;
+        return;
       }
       if (timer) clearTimeout(timer);
       poll();
