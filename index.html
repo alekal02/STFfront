@@ -366,12 +366,9 @@
       const feitos = caminhao ? caminhao.feitos : (setor && setor.feitos);
       document.getElementById("leg-feitas").hidden = true;
       document.getElementById("leg-faltando").hidden = !rota;
-      document.getElementById("leg-traco").textContent = rota ? "trajeto no eixo da rua" : "trajeto no eixo da rua";
+      document.getElementById("leg-traco").textContent = "caminho real do caminhão";
       if (rota) {
         trilhas(faltando, { color: "#b42318", weight: 4, opacity: 0.85 }, foco);
-        // Via coberta vira a trajetória azul (eixo da rua), como no PDF de referência.
-        trilhas(feitos, { color: "#ffffff", weight: 8, opacity: 0.9 }, foco);
-        trilhas(feitos, { color: "#1d4e89", weight: 5, opacity: 0.95 }, foco);
       }
       (rel.setores || []).forEach((item) => {
         const papel = item.papel || "";
@@ -393,18 +390,17 @@
       caminhoes.forEach((c) => {
         if (rota && !caminhao && c.papel !== "ATUANDO" && c.papel !== "APOIO") return;
         const passagem = c.papel === "PASSAGEM";
-        const temEixo = rota && feitos && feitos.length;
-        if (!temEixo) {
-          (c.gps || []).forEach((pts) => {
-            const layer = L.polyline(pts, {
-              color: passagem ? "#64748b" : "#1d4e89",
-              weight: passagem ? 2 : 5,
-              opacity: passagem ? 0.55 : 0.95
-            });
-            grupo.addLayer(layer);
-            foco.push(layer);
+        // Sempre o GPS do caminhão — não a malha de ruas cobertas.
+        (c.gps || []).forEach((pts) => {
+          linha(pts, { color: "#ffffff", weight: passagem ? 3 : 7, opacity: 0.85 });
+          const layer = L.polyline(pts, {
+            color: passagem ? "#64748b" : "#1d4e89",
+            weight: passagem ? 2 : 5,
+            opacity: passagem ? 0.55 : 0.95
           });
-        }
+          grupo.addLayer(layer);
+          foco.push(layer);
+        });
         if (!passagem) marcarParadas(c.paradas_pontos, (setor && (setor.codigo + " " + (setor.nome || ""))) || c.placa, "#c2410c").forEach((m) => foco.push(m));
         const saida = marcarSaida(c.saida);
         if (saida && !rota) foco.push(saida);
