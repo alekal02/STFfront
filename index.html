@@ -157,7 +157,7 @@
       <label>Data fim <input id="data-fim" type="date" /></label>
       <label>Hora fim <input id="hora-fim" type="time" value="05:59" /></label>
       <button id="atualizar" type="button">Atualizar frota</button>
-      <span class="dica">Consulta automática pausada</span>
+      <span class="dica">Pedido no grupo ou neste botão. Sem consulta automática.</span>
       <a class="atalho" href="whatsapp.html">WhatsApp</a>
       <div id="status"></div>
     </div>
@@ -209,7 +209,6 @@
     let setoresDia = [];
     let ativo = null;
     let modo = "frota";
-    let timer = null;
     const API = String(window.SAGTRACK_API || "").replace(/\/$/, "");
     function api(caminho) {
       return API + caminho;
@@ -675,18 +674,31 @@
       document.getElementById("ficha").innerHTML = "";
       grupo.clearLayers();
     }
-    async function poll() {
-      const r = await fetch(api("/api/progresso"));
-      const corpo = await r.json();
-      const msgs = corpo.mensagens || [];
-      document.getElementById("status").textContent = msgs.length ? msgs[msgs.length - 1] : "";
-      document.getElementById("atualizar").disabled = !!corpo.rodando;
-      if (corpo.rodando) {
-        timer = setTimeout(poll, 1500);
-        return;
-      }
-      timer = null;
-      if (!corpo.erro && corpo.data) await carregarDia(corpo.data);
+    let coletaRodando = false;
+    let vigiaTimer = null;
+    function agendarVigia(ms) {
+      if (vigiaTimer) clearTimeout(vigiaTimer);
+      vigiaTimer = setTimeout(vigiar, ms);
+    }
+    async function vigiar() {
+      vigiaTimer = null;
+      try {
+        const r = await fetch(api("/api/progresso"));
+        const corpo = await r.json();
+        const msgs = corpo.mensagens || [];
+        if (msgs.length) document.getElementById("status").textContent = msgs[msgs.length - 1];
+        document.getElementById("atualizar").disabled = !!corpo.rodando;
+        if (corpo.rodando) {
+          coletaRodando = true;
+          agendarVigia(2000);
+          return;
+        }
+        if (coletaRodando) {
+          coletaRodando = false;
+          if (!corpo.erro && corpo.data) await carregarDia(corpo.data);
+        }
+      } catch (e) { /* o painel tenta de novo */ }
+      agendarVigia(8000);
     }
     document.getElementById("atualizar").onclick = async () => {
       const data = document.getElementById("data").value;
@@ -709,12 +721,12 @@
       }
       if (!r.ok) {
         const corpo = await r.json().catch(() => ({}));
-        document.getElementById("status").textContent = corpo.erro || "Consulta pausada.";
+        document.getElementById("status").textContent = corpo.erro || "Não foi possível buscar os pulsos.";
         document.getElementById("atualizar").disabled = false;
         return;
       }
-      if (timer) clearTimeout(timer);
-      poll();
+      coletaRodando = true;
+      agendarVigia(400);
     };
     document.getElementById("aba-frota").onclick = () => aba("frota");
     document.getElementById("aba-rota").onclick = () => aba("rota");
@@ -738,6 +750,7 @@
         desenhar(null);
       }
     });
+    vigiar();
   </script>
 </body>
 </html>
