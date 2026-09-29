@@ -231,8 +231,8 @@
     ajustarDataFim();
 
     function corPct(pct) {
-      if (pct >= 90) return "#1f7a4d";
-      if (pct >= 45) return "#a56b00";
+      if (pct >= 70) return "#1f7a4d";
+      if (pct >= 20) return "#a56b00";
       return "#b42318";
     }
     function classe(ver) {
@@ -563,7 +563,7 @@
           "<div class='topo'><span class='placa'>" + esc(c.prefixo ? c.prefixo + " · " + (c.placa || "") : (c.placa || "—")) + "</span>" +
           "<span class='pct' style='color:" + corPct(p) + "'>" + p.toFixed(1).replace(".", ",") + "%</span></div>" +
           "<div class='sub'>Nesta rota · " + (c.paradas || 0) + " paradas</div>" +
-          "<div style='margin-top:6px'><span class='tag " + classe(p >= 90 ? "FEITA" : (p >= 45 ? "PARCIAL" : "NÃO FEITA")) + "'>" +
+          "<div style='margin-top:6px'><span class='tag " + classe(p >= 70 ? "FEITA" : (p >= 20 ? "PARCIAL" : "NÃO FEITA")) + "'>" +
           esc(c.papel === "ATUANDO" ? "Atuou" : "Apoio") + "</span></div>";
         btn.onclick = () => {
           ativo = i;
