@@ -278,7 +278,18 @@
       grupo.addLayer(m);
       return m;
     }
-    const CORES_COLETA = ["#c2410c", "#1f7a4d", "#1d4e89", "#7c3aed", "#a56b00", "#0f766e"];
+    const CORES_CAMINHAO = [
+      "#1d4ed9", "#b42318", "#0f7a44", "#7c3aed", "#b45309",
+      "#0f766e", "#be185d", "#4338ca", "#0284c7", "#7c2d12",
+      "#16a34a", "#d97706", "#0ea5e9", "#7f1d1d"
+    ];
+    function corPlaca(placa) {
+      const t = String(placa || "").toUpperCase();
+      if (!t) return CORES_CAMINHAO[0];
+      let h = 0;
+      for (let i = 0; i < t.length; i++) h += t.charCodeAt(i);
+      return CORES_CAMINHAO[h % CORES_CAMINHAO.length];
+    }
     function marcarParadas(_pontos, _rota, _cor) {
       // Relatórios e painel: só a trajetória — sem bolinhas de parada de coleta.
       return [];
@@ -303,7 +314,7 @@
     }
     function desenharColeta(caminhao, foco) {
       rotasComColeta(caminhao).forEach((t, i) => {
-        const cor = CORES_COLETA[i % CORES_COLETA.length];
+        const cor = CORES_CAMINHAO[i % CORES_CAMINHAO.length];
         aneisDe(t).forEach((anel) => {
           const poly = poligono(anel, { color: cor, weight: 3, fillColor: cor, fillOpacity: 0.12 });
           if (!poly) return;
@@ -336,9 +347,11 @@
       const lista = caminhao ? [caminhao] : ((resumo && resumo.caminhoes) || []);
       const foco = [];
       lista.forEach((c) => {
+        const cor = corPlaca(c.placa);
         (c.gps || []).forEach((pts) => {
           linha(pts, { color: "#ffffff", weight: caminhao ? 8 : 5, opacity: 0.85 });
-          const layer = L.polyline(pts, { color: "#1d4e89", weight: caminhao ? 4 : 3, opacity: 0.9 });
+          const layer = L.polyline(pts, { color: cor, weight: caminhao ? 5 : 3.5, opacity: 0.95 });
+          layer.bindPopup("<b>" + (c.prefixo ? c.prefixo + " · " : "") + (c.placa || "Caminhão") + "</b>");
           grupo.addLayer(layer);
           foco.push(layer);
         });
@@ -366,7 +379,7 @@
       const feitos = caminhao ? caminhao.feitos : (setor && setor.feitos);
       document.getElementById("leg-feitas").hidden = true;
       document.getElementById("leg-faltando").hidden = !rota;
-      document.getElementById("leg-traco").textContent = "caminho real do caminhão";
+      document.getElementById("leg-traco").textContent = "caminho real (cor por caminhão)";
       if (rota) {
         trilhas(faltando, { color: "#b42318", weight: 4, opacity: 0.85 }, foco);
       }
@@ -390,14 +403,16 @@
       caminhoes.forEach((c) => {
         if (rota && !caminhao && c.papel !== "ATUANDO" && c.papel !== "APOIO") return;
         const passagem = c.papel === "PASSAGEM";
+        const cor = passagem ? "#64748b" : corPlaca(c.placa);
         // Sempre o GPS do caminhão — não a malha de ruas cobertas.
         (c.gps || []).forEach((pts) => {
           linha(pts, { color: "#ffffff", weight: passagem ? 3 : 7, opacity: 0.85 });
           const layer = L.polyline(pts, {
-            color: passagem ? "#64748b" : "#1d4e89",
+            color: cor,
             weight: passagem ? 2 : 5,
             opacity: passagem ? 0.55 : 0.95
           });
+          layer.bindPopup("<b>" + (c.prefixo ? c.prefixo + " · " : "") + (c.placa || "Caminhão") + "</b>");
           grupo.addLayer(layer);
           foco.push(layer);
         });
@@ -455,16 +470,18 @@
       }
       caminhoes.forEach((c, i) => {
         const pct = num(c.percentual);
+        const corLinha = corPlaca(c.placa);
         const btn = document.createElement("button");
         btn.type = "button";
         btn.className = "item" + (ativo === i ? " ativo" : "");
         btn.innerHTML =
-          "<div class='topo'><span class='placa'>" + (c.prefixo ? c.prefixo + " · " + (c.placa || "") : (c.placa || "—")) + "</span>" +
+          "<div class='topo'><span class='placa'><i class='sw' style='background:" + corLinha + ";display:inline-block;width:12px;height:12px;border-radius:99px;margin-right:6px;vertical-align:-1px'></i>" +
+          (c.prefixo ? c.prefixo + " · " + (c.placa || "") : (c.placa || "—")) + "</span>" +
           "<span class='pct' style='color:" + corPct(pct) + "'>" + pct.toFixed(1).replace(".", ",") + "%</span></div>" +
           "<div class='sub'>" + (c.veiculo || "") + "</div>" +
           "<div class='sub'>" + (c.setor || "Sem setor identificado") + (c.paradas ? " · " + c.paradas + " paradas" : "") + "</div>" +
           "<div style='margin-top:6px'><span class='tag " + classe(c.veredicto) + "'>" + rotulo(c.veredicto) + "</span></div>" +
-          "<div class='barra'><i style='width:" + Math.max(0, Math.min(100, pct)) + "%;background:" + corPct(pct) + "'></i></div>";
+          "<div class='barra'><i style='width:" + Math.max(0, Math.min(100, pct)) + "%;background:" + corLinha + "'></i></div>";
         btn.onclick = () => {
           ativo = i;
           pintar();
