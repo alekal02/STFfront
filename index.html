@@ -182,11 +182,10 @@
     <div style="position:relative; min-height:0;">
       <div id="mapa"></div>
       <div class="legenda">
-        <div><i class="sw" style="background:#1d4e89"></i> <span id="leg-traco">trajeto real do dia</span></div>
-        <div><i class="sw" style="background:#8a6a12"></i> polígono oficial da rota</div>
+        <div><i class="sw" style="background:#1d4e89"></i> <span id="leg-traco">trajeto no eixo da rua</span></div>
+        <div><i class="sw" style="background:#c2410c"></i> polígono oficial da rota</div>
         <div id="leg-feitas" hidden><i class="sw" style="background:#0f7a44"></i> ruas feitas nesta rota</div>
         <div id="leg-faltando" hidden><i class="sw" style="background:#b42318"></i> ruas que faltam nesta rota</div>
-        <div><i class="sw" style="background:#c2410c;height:8px;border-radius:99px"></i> parada dentro da rota</div>
         <div><i class="sw" style="background:#0f766e"></i> base, saída do turno</div>
         <div><i class="sw" style="background:#9a3412"></i> aterro, descarga</div>
       </div>
@@ -280,20 +279,9 @@
       return m;
     }
     const CORES_COLETA = ["#c2410c", "#1f7a4d", "#1d4e89", "#7c3aed", "#a56b00", "#0f766e"];
-    function marcarParadas(pontos, rota, cor) {
-      const marcas = [];
-      (pontos || []).forEach((p) => {
-        if (p.latitude == null) return;
-        const m = L.circleMarker([p.latitude, p.longitude], {
-          radius: 6, color: "#fff", weight: 2, fillColor: cor || "#c2410c", fillOpacity: 1
-        });
-        const min = Math.round((p.segundos || 0) / 60);
-        const hora = p.inicio ? p.inicio + "–" + (p.fim || "") : "";
-        m.bindPopup("<b>" + (rota || "Parada de coleta") + "</b>" + (hora ? "<br>" + hora : "") + (min ? "<br>" + min + " min" : ""));
-        grupo.addLayer(m);
-        marcas.push(m);
-      });
-      return marcas;
+    function marcarParadas(_pontos, _rota, _cor) {
+      // Relatórios e painel: só a trajetória — sem bolinhas de parada de coleta.
+      return [];
     }
     function rotasComColeta(caminhao) {
       return (caminhao.tocados || []).filter((t) => t.papel === "ATUANDO" || t.papel === "APOIO");
@@ -376,12 +364,14 @@
       const setor = (rel.setores || [])[0];
       const faltando = caminhao ? caminhao.faltando : (setor && setor.faltando);
       const feitos = caminhao ? caminhao.feitos : (setor && setor.feitos);
-      document.getElementById("leg-feitas").hidden = !rota;
+      document.getElementById("leg-feitas").hidden = true;
       document.getElementById("leg-faltando").hidden = !rota;
-      document.getElementById("leg-traco").textContent = rota ? "trajeto nesta rota" : "trajeto real do dia";
+      document.getElementById("leg-traco").textContent = rota ? "trajeto no eixo da rua" : "trajeto no eixo da rua";
       if (rota) {
         trilhas(faltando, { color: "#b42318", weight: 4, opacity: 0.85 }, foco);
-        trilhas(feitos, { color: "#0f7a44", weight: 5, opacity: 0.95 }, foco);
+        // Via coberta vira a trajetória azul (eixo da rua), como no PDF de referência.
+        trilhas(feitos, { color: "#ffffff", weight: 8, opacity: 0.9 }, foco);
+        trilhas(feitos, { color: "#1d4e89", weight: 5, opacity: 0.95 }, foco);
       }
       (rel.setores || []).forEach((item) => {
         const papel = item.papel || "";
@@ -403,15 +393,18 @@
       caminhoes.forEach((c) => {
         if (rota && !caminhao && c.papel !== "ATUANDO" && c.papel !== "APOIO") return;
         const passagem = c.papel === "PASSAGEM";
-        (c.gps || []).forEach((pts) => {
-          const layer = L.polyline(pts, {
-            color: passagem ? "#64748b" : "#1d4e89",
-            weight: passagem ? 2 : 4,
-            opacity: passagem ? 0.55 : 0.9
+        const temEixo = rota && feitos && feitos.length;
+        if (!temEixo) {
+          (c.gps || []).forEach((pts) => {
+            const layer = L.polyline(pts, {
+              color: passagem ? "#64748b" : "#1d4e89",
+              weight: passagem ? 2 : 5,
+              opacity: passagem ? 0.55 : 0.95
+            });
+            grupo.addLayer(layer);
+            foco.push(layer);
           });
-          grupo.addLayer(layer);
-          foco.push(layer);
-        });
+        }
         if (!passagem) marcarParadas(c.paradas_pontos, (setor && (setor.codigo + " " + (setor.nome || ""))) || c.placa, "#c2410c").forEach((m) => foco.push(m));
         const saida = marcarSaida(c.saida);
         if (saida && !rota) foco.push(saida);
