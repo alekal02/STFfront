@@ -128,7 +128,8 @@
       padding: 8px 10px;
       font-size: 12px;
     }
-    .legenda div { display: flex; align-items: center; gap: 6px; margin: 3px 0; }
+    .legenda div, .legenda label { display: flex; align-items: center; gap: 6px; margin: 3px 0; }
+    .legenda label { font-size: 12px; color: var(--tinta); }
     .sw { width: 18px; height: 4px; border-radius: 99px; }
     #status { color: var(--muted); font-size: 12px; max-width: 280px; }
     .abas { display: flex; gap: 6px; padding: 10px 12px 0; }
@@ -184,8 +185,10 @@
       <div id="mapa"></div>
       <div class="legenda">
         <div id="leg-traco-linha"><i class="sw" style="background:#1d4e89"></i> <span id="leg-traco">via confirmada pelo pulso</span></div>
-        <div><i class="sw" style="background:transparent;border-top:3px dashed #1d4e89;height:0;border-radius:0"></i> estimado na via, até o próximo pulso</div>
-        <div id="leg-original" hidden><i class="sw" style="background:#64748b"></i> pulsos originais, sem cortar quadra</div>
+        <div><i class="sw" style="background:transparent;border-top:3px dashed #1d4e89;height:0;border-radius:0"></i> estimado na via, caminho incerto</div>
+        <div id="leg-incertos" hidden><i class="sw" style="background:#a56b00"></i> rua com passagem incerta</div>
+        <label class="chk"><input id="ver-original" type="checkbox" /> GPS original</label>
+        <div id="leg-original" hidden><i class="sw" style="background:#64748b"></i> pulsos originais, ligação direta</div>
         <div id="legenda-caminhoes"></div>
         <div><i class="sw" style="background:#8a6a12"></i> polígono oficial da rota</div>
         <div id="leg-feitas" hidden><i class="sw" style="background:#0f7a44"></i> ruas feitas nesta rota</div>
@@ -362,7 +365,13 @@
         });
       });
     }
-    function desenhar(caminhao) {
+    let cena = null;
+    function querOriginal() {
+      const el = document.getElementById("ver-original");
+      return !!(el && el.checked);
+    }
+    function desenhar(caminhao, ajustar) {
+      cena = { tipo: "frota", caminhao: caminhao };
       grupo.clearLayers();
       const todos = (resumo && resumo.caminhoes) || [];
       const lista = caminhao ? [caminhao] : todos;
@@ -370,7 +379,9 @@
       desenharRotasDoDia(foco);
       pintarLegendaCaminhoes(todos, true);
       const original = document.getElementById("leg-original");
-      if (original) original.hidden = !caminhao;
+      const legIncertos = document.getElementById("leg-incertos");
+      if (original) original.hidden = !querOriginal();
+      if (legIncertos) legIncertos.hidden = true;
       lista.forEach((c) => {
         const indice = Math.max(0, todos.findIndex((item) => item.placa === c.placa));
         const cor = CORES_CAMINHAO[indice % CORES_CAMINHAO.length];
@@ -380,21 +391,23 @@
         if (saida) foco.push(saida);
         desenharColeta(c, foco);
       });
-      if (foco.length) mapa.fitBounds(L.featureGroup(foco).getBounds(), { padding: [28, 28], maxZoom: caminhao ? 16 : 13 });
+      if (ajustar !== false && foco.length) mapa.fitBounds(L.featureGroup(foco).getBounds(), { padding: [28, 28], maxZoom: caminhao ? 16 : 13 });
     }
     function textoCasa(c) {
       const k = c.casamento || {};
       if (!k.confirmado && !k.estimado && !k.indeterminado) return "Trajeto na via oficial";
+      const conf = k.confianca != null ? "<br>Confiança do casamento: " + Math.round(Number(k.confianca) * 100) + "%" : "";
       return "Via confirmada: " + (k.confirmado || 0)
-        + "<br>Estimado até o próximo pulso: " + (k.estimado || 0)
-        + "<br>Salto sem via compatível: " + (k.indeterminado || 0);
+        + "<br>Estimado, caminho incerto: " + (k.estimado || 0)
+        + "<br>Sem via compatível: " + (k.indeterminado || 0)
+        + conf;
     }
     function desenharTrajeto(c, cor, nome, foco, um) {
-      if (um) {
+      if (querOriginal()) {
         (c.gps_original || []).forEach((pts) => {
           if (!pts || pts.length < 2) return;
-          const layer = L.polyline(pts, { color: "#64748b", weight: 2, opacity: 0.7 });
-          layer.bindPopup("<b>" + esc(nome) + "</b><br>Pulsos originais. O salto longo não corta a quadra.");
+          const layer = L.polyline(pts, { color: "#64748b", weight: 2, opacity: 0.75 });
+          layer.bindPopup("<b>" + esc(nome) + "</b><br>GPS original. A ligação direta pode cortar a quadra.");
           grupo.addLayer(layer);
           foco.push(layer);
         });
@@ -415,7 +428,14 @@
           opacity: 0.95,
           dashArray: "8 7"
         });
-        layer.bindPopup("<b>" + esc(nome) + "</b><br>Caminho estimado na via até o próximo pulso. Não conta como rua feita.");
+        layer.bindPopup("<b>" + esc(nome) + "</b><br>Caminho estimado na via. Há incerteza ou o pulso não cravou a rua. Não entra na porcentagem.");
+        grupo.addLayer(layer);
+        foco.push(layer);
+      });
+      (c.gps_deslocamento || []).forEach((pts) => {
+        if (!pts || pts.length < 2) return;
+        const layer = L.polyline(pts, { color: cor, weight: um ? 3 : 2, opacity: 0.75, dashArray: "2 7" });
+        layer.bindPopup("<b>" + esc(nome) + "</b><br>Deslocamento na base ou no aterro. Não entra na cobertura da rota.");
         grupo.addLayer(layer);
         foco.push(layer);
       });
@@ -455,7 +475,8 @@
           + esc(nome) + (papel ? " · " + papel : "") + "</div>";
       }).join("");
     }
-    function desenharRelatorio(rel, placa) {
+    function desenharRelatorio(rel, placa, ajustar) {
+      cena = { tipo: "rel", rel: rel, placa: placa };
       grupo.clearLayers();
       const foco = [];
       const rota = modo === "rota";
@@ -463,11 +484,17 @@
       const setor = (rel.setores || [])[0];
       const faltando = caminhao ? caminhao.faltando : (setor && setor.faltando);
       const feitos = caminhao ? caminhao.feitos : (setor && setor.feitos);
+      const incertos = caminhao ? caminhao.incertos : (setor && setor.incertos);
       document.getElementById("leg-feitas").hidden = !rota;
       document.getElementById("leg-faltando").hidden = !rota;
+      const legIncertos = document.getElementById("leg-incertos");
+      if (legIncertos) legIncertos.hidden = !rota;
+      const original = document.getElementById("leg-original");
+      if (original) original.hidden = !querOriginal();
       document.getElementById("leg-traco").textContent = rota ? "via confirmada nesta rota" : "via confirmada pelo pulso";
       if (rota) {
         trilhas(faltando, { color: "#b42318", weight: 4, opacity: 0.85 }, foco);
+        trilhas(incertos, { color: "#a56b00", weight: 4, opacity: 0.9, dashArray: "6 5" }, foco);
         trilhas(feitos, { color: "#0f7a44", weight: 5, opacity: 0.95 }, foco);
       }
       (rel.setores || []).forEach((item) => {
@@ -514,7 +541,23 @@
             opacity: 0.9,
             dashArray: "8 7"
           });
-          layer.bindPopup("<b>" + esc(nome) + "</b><br>Estimado na via até o próximo pulso. Não conta como rua feita.");
+          layer.bindPopup("<b>" + esc(nome) + "</b><br>Estimado na via. Não entra na porcentagem da rota.");
+          grupo.addLayer(layer);
+          foco.push(layer);
+        });
+        if (querOriginal()) {
+          (c.gps_original || []).forEach((pts) => {
+            if (!pts || pts.length < 2) return;
+            const layer = L.polyline(pts, { color: "#64748b", weight: 2, opacity: 0.7 });
+            layer.bindPopup("<b>" + esc(nome) + "</b><br>GPS original.");
+            grupo.addLayer(layer);
+            foco.push(layer);
+          });
+        }
+        (c.gps_deslocamento || []).forEach((pts) => {
+          if (!pts || pts.length < 2) return;
+          const layer = L.polyline(pts, { color: cor, weight: 2, opacity: 0.7, dashArray: "2 7" });
+          layer.bindPopup("<b>" + esc(nome) + "</b><br>Deslocamento na base ou no aterro.");
           grupo.addLayer(layer);
           foco.push(layer);
         });
@@ -522,8 +565,8 @@
         const saida = marcarSaida(c.saida);
         if (saida && !rota) foco.push(saida);
       });
-      if (foco.length) mapa.fitBounds(L.featureGroup(foco).getBounds(), { padding: [28, 28], maxZoom: 16 });
-      else mapa.setView([-16.82, -49.24], 12);
+      if (ajustar !== false && foco.length) mapa.fitBounds(L.featureGroup(foco).getBounds(), { padding: [28, 28], maxZoom: 16 });
+      else if (ajustar !== false) mapa.setView([-16.82, -49.24], 12);
     }
     function ficha(linhas) {
       const box = document.getElementById("ficha");
@@ -773,6 +816,11 @@
       } catch (e) { /* o painel tenta de novo */ }
       agendarVigia(8000);
     }
+    document.getElementById("ver-original").onchange = () => {
+      if (!cena) return;
+      if (cena.tipo === "frota") desenhar(cena.caminhao, false);
+      else if (cena.rel) desenharRelatorio(cena.rel, cena.placa, false);
+    };
     document.getElementById("aba-frota").onclick = () => aba("frota");
     document.getElementById("aba-rota").onclick = () => aba("rota");
     document.getElementById("aba-placa").onclick = () => aba("placa");
