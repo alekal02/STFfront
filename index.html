@@ -69,7 +69,7 @@
       text-decoration: none;
       background: transparent;
     }
-    .dica { font-size: 11px; color: var(--muted); align-self: center; max-width: 110px; line-height: 1.2; }
+    .dica { font-size: 11px; color: var(--muted); align-self: center; max-width: 220px; line-height: 1.25; }
     main { display: grid; grid-template-columns: 360px 1fr; min-height: 0; }
     aside {
       background: var(--papel);
@@ -156,8 +156,7 @@
       <label>Hora início <input id="hora-inicio" type="time" value="06:00" /></label>
       <label>Data fim <input id="data-fim" type="date" /></label>
       <label>Hora fim <input id="hora-fim" type="time" value="05:59" /></label>
-      <button id="atualizar" type="button">Atualizar frota</button>
-      <span class="dica">A frota fica salva por 1 h. A rota pode ser pedida de novo.</span>
+      <span class="dica">O mapa segue o grupo. Frota, rota ou placa atualizam daqui.</span>
       <a class="atalho" href="whatsapp.html">WhatsApp</a>
       <div id="status"></div>
     </div>
@@ -687,7 +686,6 @@
         const corpo = await r.json();
         const msgs = corpo.mensagens || [];
         if (msgs.length) document.getElementById("status").textContent = msgs[msgs.length - 1];
-        document.getElementById("atualizar").disabled = !!corpo.rodando;
         if (corpo.rodando) {
           coletaRodando = true;
           agendarVigia(2000);
@@ -700,40 +698,6 @@
       } catch (e) { /* o painel tenta de novo */ }
       agendarVigia(8000);
     }
-    document.getElementById("atualizar").onclick = async () => {
-      const data = document.getElementById("data").value;
-      document.getElementById("atualizar").disabled = true;
-      document.getElementById("status").textContent = "Horário congelado. Buscando os pulsos até agora...";
-      const r = await fetch(api("/api/coletar"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          data: data,
-          data_fim: document.getElementById("data-fim").value,
-          hora_inicio: document.getElementById("hora-inicio").value,
-          hora_fim: document.getElementById("hora-fim").value
-        })
-      });
-      if (r.status === 409) {
-        document.getElementById("status").textContent = "A coleta deste dia já está rodando.";
-        document.getElementById("atualizar").disabled = false;
-        return;
-      }
-      const corpo = await r.json().catch(() => ({}));
-      if (!r.ok) {
-        document.getElementById("status").textContent = corpo.erro || "Não foi possível buscar os pulsos.";
-        document.getElementById("atualizar").disabled = false;
-        return;
-      }
-      if (corpo.reutilizado) {
-        document.getElementById("status").textContent = "A conta desta hora continua no mapa. Os pulsos não foram pedidos de novo.";
-        document.getElementById("atualizar").disabled = false;
-        if (corpo.data) await carregarDia(corpo.data);
-        return;
-      }
-      coletaRodando = true;
-      agendarVigia(400);
-    };
     document.getElementById("aba-frota").onclick = () => aba("frota");
     document.getElementById("aba-rota").onclick = () => aba("rota");
     document.getElementById("aba-placa").onclick = () => aba("placa");
