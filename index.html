@@ -361,15 +361,20 @@
       });
     }
     function desenhar(caminhao) {
-      pintarLegendaCaminhoes([]);
       grupo.clearLayers();
-      const lista = caminhao ? [caminhao] : ((resumo && resumo.caminhoes) || []);
+      const todos = (resumo && resumo.caminhoes) || [];
+      const lista = caminhao ? [caminhao] : todos;
       const foco = [];
       desenharRotasDoDia(foco);
+      pintarLegendaCaminhoes(todos, true);
       lista.forEach((c) => {
+        const indice = Math.max(0, todos.findIndex((item) => item.placa === c.placa));
+        const cor = CORES_CAMINHAO[indice % CORES_CAMINHAO.length];
+        const nome = (c.prefixo ? c.prefixo + " · " : "") + (c.placa || "Caminhão");
         (c.gps || []).forEach((pts) => {
           linha(pts, { color: "#ffffff", weight: caminhao ? 8 : 5, opacity: 0.85 });
-          const layer = L.polyline(pts, { color: "#1d4e89", weight: caminhao ? 4 : 3, opacity: 0.9 });
+          const layer = L.polyline(pts, { color: cor, weight: caminhao ? 4 : 3, opacity: 0.95 });
+          layer.bindPopup("<b>" + esc(nome) + "</b>");
           grupo.addLayer(layer);
           foco.push(layer);
         });
@@ -387,13 +392,17 @@
         foco.push(layer);
       });
     }
-    const CORES_CAMINHAO = ["#1d4e89", "#0f7a44", "#6d28d9", "#0e7490", "#9d174d"];
+    const CORES_CAMINHAO = [
+      "#1d4e89", "#0f7a44", "#6d28d9", "#c2410c", "#0e7490",
+      "#9d174d", "#a16207", "#0369a1", "#15803d", "#7c3aed",
+      "#b45309", "#0f766e", "#be123c", "#1e3a8a"
+    ];
     function caminhoesDaRota(rel) {
       return ((rel && rel.caminhoes) || [])
         .filter((c) => c.papel === "ATUANDO" || c.papel === "APOIO")
         .sort((a, b) => (a.papel === "ATUANDO" ? 0 : 1) - (b.papel === "ATUANDO" ? 0 : 1));
     }
-    function pintarLegendaCaminhoes(lista) {
+    function pintarLegendaCaminhoes(lista, frota) {
       const box = document.getElementById("legenda-caminhoes");
       const linha = document.getElementById("leg-traco-linha");
       if (!box) return;
@@ -405,9 +414,9 @@
       if (linha) linha.hidden = true;
       box.innerHTML = lista.map((c, i) => {
         const nome = (c.prefixo ? c.prefixo + " · " : "") + (c.placa || "caminhão");
-        const papel = c.papel === "ATUANDO" ? "atuou" : "apoio";
+        const papel = frota ? "" : (c.papel === "ATUANDO" ? "atuou" : "apoio");
         return "<div><i class='sw' style='background:" + CORES_CAMINHAO[i % CORES_CAMINHAO.length] + "'></i> "
-          + esc(nome) + " · " + papel + "</div>";
+          + esc(nome) + (papel ? " · " + papel : "") + "</div>";
       }).join("");
     }
     function desenharRelatorio(rel, placa) {
