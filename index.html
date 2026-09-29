@@ -155,7 +155,6 @@
       <label>Hora início <input id="hora-inicio" type="time" value="06:00" /></label>
       <label>Data fim <input id="data-fim" type="date" /></label>
       <label>Hora fim <input id="hora-fim" type="time" value="05:59" /></label>
-      <button id="atualizar" type="button">Atualizar frota</button>
       <a class="atalho" href="whatsapp.html">WhatsApp</a>
       <div id="status"></div>
     </div>
@@ -648,38 +647,21 @@
       grupo.clearLayers();
     }
     async function poll() {
-      const r = await fetch(api("/api/progresso"));
-      const corpo = await r.json();
-      const msgs = corpo.mensagens || [];
-      document.getElementById("status").textContent = msgs.length ? msgs[msgs.length - 1] : "";
-      document.getElementById("atualizar").disabled = !!corpo.rodando;
-      if (corpo.rodando) {
-        timer = setTimeout(poll, 1500);
-        return;
-      }
-      timer = null;
-      if (!corpo.erro && corpo.data) await carregarDia(corpo.data);
+      try {
+        const r = await fetch(api("/api/progresso"));
+        const corpo = await r.json();
+        const msgs = corpo.mensagens || [];
+        document.getElementById("status").textContent = msgs.length
+          ? msgs[msgs.length - 1]
+          : (corpo.rodando ? "Atualizando frota pelo WhatsApp..." : "");
+        if (corpo.rodando) {
+          timer = setTimeout(poll, 1500);
+          return;
+        }
+        if (corpo.data) await carregarDia(corpo.data);
+      } catch (e) { /* tenta de novo */ }
+      timer = setTimeout(poll, 8000);
     }
-    document.getElementById("atualizar").onclick = async () => {
-      const data = document.getElementById("data").value;
-      document.getElementById("atualizar").disabled = true;
-      document.getElementById("status").textContent = "Horário congelado. Buscando os pulsos até agora...";
-      const r = await fetch(api("/api/coletar"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          data: data,
-          data_fim: document.getElementById("data-fim").value,
-          hora_inicio: document.getElementById("hora-inicio").value,
-          hora_fim: document.getElementById("hora-fim").value
-        })
-      });
-      if (r.status === 409) {
-        document.getElementById("status").textContent = "A coleta deste dia já está rodando.";
-      }
-      if (timer) clearTimeout(timer);
-      poll();
-    };
     document.getElementById("aba-frota").onclick = () => aba("frota");
     document.getElementById("aba-rota").onclick = () => aba("rota");
     document.getElementById("aba-placa").onclick = () => aba("placa");
@@ -702,6 +684,7 @@
         desenhar(null);
       }
     });
+    poll();
   </script>
 </body>
 </html>
