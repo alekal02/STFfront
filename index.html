@@ -69,7 +69,6 @@
       text-decoration: none;
       background: transparent;
     }
-    .dica { font-size: 11px; color: var(--muted); align-self: center; max-width: 220px; line-height: 1.25; }
     main { display: grid; grid-template-columns: 360px 1fr; min-height: 0; }
     aside {
       background: var(--papel);
@@ -128,8 +127,7 @@
       padding: 8px 10px;
       font-size: 12px;
     }
-    .legenda div, .legenda label { display: flex; align-items: center; gap: 6px; margin: 3px 0; }
-    .legenda label { font-size: 12px; color: var(--tinta); }
+    .legenda div { display: flex; align-items: center; gap: 6px; margin: 3px 0; }
     .sw { width: 18px; height: 4px; border-radius: 99px; }
     #status { color: var(--muted); font-size: 12px; max-width: 280px; }
     .abas { display: flex; gap: 6px; padding: 10px 12px 0; }
@@ -157,7 +155,7 @@
       <label>Hora início <input id="hora-inicio" type="time" value="06:00" /></label>
       <label>Data fim <input id="data-fim" type="date" /></label>
       <label>Hora fim <input id="hora-fim" type="time" value="05:59" /></label>
-      <span class="dica">O mapa segue o grupo. Frota, rota ou placa atualizam daqui.</span>
+      <button id="atualizar" type="button">Atualizar frota</button>
       <a class="atalho" href="whatsapp.html">WhatsApp</a>
       <div id="status"></div>
     </div>
@@ -184,12 +182,7 @@
     <div style="position:relative; min-height:0;">
       <div id="mapa"></div>
       <div class="legenda">
-        <div id="leg-traco-linha"><i class="sw" style="background:#1d4e89"></i> <span id="leg-traco">via confirmada pelo pulso</span></div>
-        <div><i class="sw" style="background:transparent;border-top:3px dashed #1d4e89;height:0;border-radius:0"></i> estimado na via, caminho incerto</div>
-        <div id="leg-incertos" hidden><i class="sw" style="background:#a56b00"></i> rua com passagem incerta</div>
-        <label class="chk"><input id="ver-original" type="checkbox" /> GPS original</label>
-        <div id="leg-original" hidden><i class="sw" style="background:#64748b"></i> pulsos originais, ligação direta</div>
-        <div id="legenda-caminhoes"></div>
+        <div><i class="sw" style="background:#1d4e89"></i> <span id="leg-traco">trajeto real do dia</span></div>
         <div><i class="sw" style="background:#8a6a12"></i> polígono oficial da rota</div>
         <div id="leg-feitas" hidden><i class="sw" style="background:#0f7a44"></i> ruas feitas nesta rota</div>
         <div id="leg-faltando" hidden><i class="sw" style="background:#b42318"></i> ruas que faltam nesta rota</div>
@@ -213,6 +206,7 @@
     let setoresDia = [];
     let ativo = null;
     let modo = "frota";
+    let timer = null;
     const API = String(window.SAGTRACK_API || "").replace(/\/$/, "");
     function api(caminho) {
       return API + caminho;
@@ -325,7 +319,7 @@
         aneisDe(t).forEach((anel) => {
           const poly = poligono(anel, { color: cor, weight: 3, fillColor: cor, fillOpacity: 0.12 });
           if (!poly) return;
-          poly.bindPopup("<b>" + (t.setor || t.codigo || "") + "</b><br>" + (t.paradas || 0) + " paradas na rua da rota");
+          poly.bindPopup("<b>" + (t.setor || t.codigo || "") + "</b><br>" + (t.paradas || 0) + " paradas dentro do polígono");
           foco.push(poly);
         });
         marcarParadas(t.paradas_pontos, t.setor || t.codigo, cor).forEach((m) => foco.push(m));
@@ -349,96 +343,22 @@
       });
     }
     fetch(api("/api/locais")).then((r) => r.json()).then((corpo) => desenharLocais(corpo.locais || [])).catch(() => {});
-    function desenharRotasDoDia(foco) {
-      (setoresDia || []).forEach((item) => {
-        (item.poligonos || []).forEach((anel) => {
-          const poly = poligono(anel, {
-            color: "#8a6a12",
-            weight: 2,
-            fillColor: "#e6c35c",
-            fillOpacity: 0.08
-          });
-          if (!poly) return;
-          const turno = item.turno ? "<br>" + esc(String(item.turno).toLowerCase()) : "";
-          poly.bindPopup("<b>" + esc(item.codigo || "") + " " + esc(item.nome || "") + "</b>" + turno);
-          foco.push(poly);
-        });
-      });
-    }
-    let cena = null;
-    function querOriginal() {
-      const el = document.getElementById("ver-original");
-      return !!(el && el.checked);
-    }
-    function desenhar(caminhao, ajustar) {
-      cena = { tipo: "frota", caminhao: caminhao };
+    function desenhar(caminhao) {
       grupo.clearLayers();
-      const todos = (resumo && resumo.caminhoes) || [];
-      const lista = caminhao ? [caminhao] : todos;
+      const lista = caminhao ? [caminhao] : ((resumo && resumo.caminhoes) || []);
       const foco = [];
-      desenharRotasDoDia(foco);
-      pintarLegendaCaminhoes(todos, true);
-      const original = document.getElementById("leg-original");
-      const legIncertos = document.getElementById("leg-incertos");
-      if (original) original.hidden = !querOriginal();
-      if (legIncertos) legIncertos.hidden = true;
       lista.forEach((c) => {
-        const indice = Math.max(0, todos.findIndex((item) => item.placa === c.placa));
-        const cor = CORES_CAMINHAO[indice % CORES_CAMINHAO.length];
-        const nome = (c.prefixo ? c.prefixo + " · " : "") + (c.placa || "Caminhão");
-        desenharTrajeto(c, cor, nome, foco, !!caminhao);
+        (c.gps || []).forEach((pts) => {
+          linha(pts, { color: "#ffffff", weight: caminhao ? 8 : 5, opacity: 0.85 });
+          const layer = L.polyline(pts, { color: "#1d4e89", weight: caminhao ? 4 : 3, opacity: 0.9 });
+          grupo.addLayer(layer);
+          foco.push(layer);
+        });
         const saida = marcarSaida(c.saida);
         if (saida) foco.push(saida);
         desenharColeta(c, foco);
       });
-      if (ajustar !== false && foco.length) mapa.fitBounds(L.featureGroup(foco).getBounds(), { padding: [28, 28], maxZoom: caminhao ? 16 : 13 });
-    }
-    function textoCasa(c) {
-      const k = c.casamento || {};
-      if (!k.confirmado && !k.estimado && !k.indeterminado) return "Trajeto na via oficial";
-      const conf = k.confianca != null ? "<br>Confiança do casamento: " + Math.round(Number(k.confianca) * 100) + "%" : "";
-      return "Via confirmada: " + (k.confirmado || 0)
-        + "<br>Estimado, caminho incerto: " + (k.estimado || 0)
-        + "<br>Sem via compatível: " + (k.indeterminado || 0)
-        + conf;
-    }
-    function desenharTrajeto(c, cor, nome, foco, um) {
-      if (querOriginal()) {
-        (c.gps_original || []).forEach((pts) => {
-          if (!pts || pts.length < 2) return;
-          const layer = L.polyline(pts, { color: "#64748b", weight: 2, opacity: 0.75 });
-          layer.bindPopup("<b>" + esc(nome) + "</b><br>GPS original. A ligação direta pode cortar a quadra.");
-          grupo.addLayer(layer);
-          foco.push(layer);
-        });
-      }
-      (c.gps || []).forEach((pts) => {
-        if (!pts || pts.length < 2) return;
-        linha(pts, { color: "#ffffff", weight: um ? 8 : 5, opacity: 0.85 });
-        const layer = L.polyline(pts, { color: cor, weight: um ? 4 : 3, opacity: 0.95 });
-        layer.bindPopup("<b>" + esc(nome) + "</b><br>" + textoCasa(c));
-        grupo.addLayer(layer);
-        foco.push(layer);
-      });
-      (c.gps_estimado || []).forEach((pts) => {
-        if (!pts || pts.length < 2) return;
-        const layer = L.polyline(pts, {
-          color: cor,
-          weight: um ? 4 : 3,
-          opacity: 0.95,
-          dashArray: "8 7"
-        });
-        layer.bindPopup("<b>" + esc(nome) + "</b><br>Caminho estimado na via. Há incerteza ou o pulso não cravou a rua. Não entra na porcentagem.");
-        grupo.addLayer(layer);
-        foco.push(layer);
-      });
-      (c.gps_deslocamento || []).forEach((pts) => {
-        if (!pts || pts.length < 2) return;
-        const layer = L.polyline(pts, { color: cor, weight: um ? 3 : 2, opacity: 0.75, dashArray: "2 7" });
-        layer.bindPopup("<b>" + esc(nome) + "</b><br>Deslocamento na base ou no aterro. Não entra na cobertura da rota.");
-        grupo.addLayer(layer);
-        foco.push(layer);
-      });
+      if (foco.length) mapa.fitBounds(L.featureGroup(foco).getBounds(), { padding: [28, 28], maxZoom: caminhao ? 16 : 13 });
     }
     function trilhas(lista, opt, foco) {
       (lista || []).forEach((pts) => {
@@ -448,35 +368,7 @@
         foco.push(layer);
       });
     }
-    const CORES_CAMINHAO = [
-      "#1d4e89", "#0f7a44", "#6d28d9", "#c2410c", "#0e7490",
-      "#9d174d", "#a16207", "#0369a1", "#15803d", "#7c3aed",
-      "#b45309", "#0f766e", "#be123c", "#1e3a8a"
-    ];
-    function caminhoesDaRota(rel) {
-      return ((rel && rel.caminhoes) || [])
-        .filter((c) => c.papel === "ATUANDO" || c.papel === "APOIO")
-        .sort((a, b) => (a.papel === "ATUANDO" ? 0 : 1) - (b.papel === "ATUANDO" ? 0 : 1));
-    }
-    function pintarLegendaCaminhoes(lista, frota) {
-      const box = document.getElementById("legenda-caminhoes");
-      const linha = document.getElementById("leg-traco-linha");
-      if (!box) return;
-      if (!lista || !lista.length) {
-        box.innerHTML = "";
-        if (linha) linha.hidden = false;
-        return;
-      }
-      if (linha) linha.hidden = true;
-      box.innerHTML = lista.map((c, i) => {
-        const nome = (c.prefixo ? c.prefixo + " · " : "") + (c.placa || "caminhão");
-        const papel = frota ? "" : (c.papel === "ATUANDO" ? "atuou" : "apoio");
-        return "<div><i class='sw' style='background:" + CORES_CAMINHAO[i % CORES_CAMINHAO.length] + "'></i> "
-          + esc(nome) + (papel ? " · " + papel : "") + "</div>";
-      }).join("");
-    }
-    function desenharRelatorio(rel, placa, ajustar) {
-      cena = { tipo: "rel", rel: rel, placa: placa };
+    function desenharRelatorio(rel, placa) {
       grupo.clearLayers();
       const foco = [];
       const rota = modo === "rota";
@@ -484,17 +376,11 @@
       const setor = (rel.setores || [])[0];
       const faltando = caminhao ? caminhao.faltando : (setor && setor.faltando);
       const feitos = caminhao ? caminhao.feitos : (setor && setor.feitos);
-      const incertos = caminhao ? caminhao.incertos : (setor && setor.incertos);
       document.getElementById("leg-feitas").hidden = !rota;
       document.getElementById("leg-faltando").hidden = !rota;
-      const legIncertos = document.getElementById("leg-incertos");
-      if (legIncertos) legIncertos.hidden = !rota;
-      const original = document.getElementById("leg-original");
-      if (original) original.hidden = !querOriginal();
-      document.getElementById("leg-traco").textContent = rota ? "via confirmada nesta rota" : "via confirmada pelo pulso";
+      document.getElementById("leg-traco").textContent = rota ? "trajeto nesta rota" : "trajeto real do dia";
       if (rota) {
         trilhas(faltando, { color: "#b42318", weight: 4, opacity: 0.85 }, foco);
-        trilhas(incertos, { color: "#a56b00", weight: 4, opacity: 0.9, dashArray: "6 5" }, foco);
         trilhas(feitos, { color: "#0f7a44", weight: 5, opacity: 0.95 }, foco);
       }
       (rel.setores || []).forEach((item) => {
@@ -513,51 +399,16 @@
           }
         });
       });
-      const daRota = caminhoesDaRota(rel);
-      pintarLegendaCaminhoes(rota ? daRota : []);
       const caminhoes = caminhao ? [caminhao] : (rel.caminhoes || []);
       caminhoes.forEach((c) => {
         if (rota && !caminhao && c.papel !== "ATUANDO" && c.papel !== "APOIO") return;
         const passagem = c.papel === "PASSAGEM";
-        const indice = daRota.findIndex((item) => item.placa === c.placa);
-        const cor = passagem ? "#64748b" : CORES_CAMINHAO[(indice < 0 ? 0 : indice) % CORES_CAMINHAO.length];
-        const nome = (c.prefixo ? c.prefixo + " · " : "") + (c.placa || "");
-        const aviso = c.papel === "APOIO" ? "Apoio nesta rota" : "Atuou nesta rota";
         (c.gps || []).forEach((pts) => {
           const layer = L.polyline(pts, {
-            color: cor,
-            weight: passagem ? 2 : 5,
-            opacity: passagem ? 0.55 : 0.95
-          });
-          layer.bindPopup("<b>" + esc(nome) + "</b><br>" + aviso);
-          grupo.addLayer(layer);
-          foco.push(layer);
-        });
-        (c.gps_estimado || []).forEach((pts) => {
-          if (!pts || pts.length < 2) return;
-          const layer = L.polyline(pts, {
-            color: cor,
+            color: passagem ? "#64748b" : "#1d4e89",
             weight: passagem ? 2 : 4,
-            opacity: 0.9,
-            dashArray: "8 7"
+            opacity: passagem ? 0.55 : 0.9
           });
-          layer.bindPopup("<b>" + esc(nome) + "</b><br>Estimado na via. Não entra na porcentagem da rota.");
-          grupo.addLayer(layer);
-          foco.push(layer);
-        });
-        if (querOriginal()) {
-          (c.gps_original || []).forEach((pts) => {
-            if (!pts || pts.length < 2) return;
-            const layer = L.polyline(pts, { color: "#64748b", weight: 2, opacity: 0.7 });
-            layer.bindPopup("<b>" + esc(nome) + "</b><br>GPS original.");
-            grupo.addLayer(layer);
-            foco.push(layer);
-          });
-        }
-        (c.gps_deslocamento || []).forEach((pts) => {
-          if (!pts || pts.length < 2) return;
-          const layer = L.polyline(pts, { color: cor, weight: 2, opacity: 0.7, dashArray: "2 7" });
-          layer.bindPopup("<b>" + esc(nome) + "</b><br>Deslocamento na base ou no aterro.");
           grupo.addLayer(layer);
           foco.push(layer);
         });
@@ -565,8 +416,8 @@
         const saida = marcarSaida(c.saida);
         if (saida && !rota) foco.push(saida);
       });
-      if (ajustar !== false && foco.length) mapa.fitBounds(L.featureGroup(foco).getBounds(), { padding: [28, 28], maxZoom: 16 });
-      else if (ajustar !== false) mapa.setView([-16.82, -49.24], 12);
+      if (foco.length) mapa.fitBounds(L.featureGroup(foco).getBounds(), { padding: [28, 28], maxZoom: 16 });
+      else mapa.setView([-16.82, -49.24], 12);
     }
     function ficha(linhas) {
       const box = document.getElementById("ficha");
@@ -705,8 +556,7 @@
         btn.innerHTML =
           "<div class='topo'><span class='placa'>" + esc(c.prefixo ? c.prefixo + " · " + (c.placa || "") : (c.placa || "—")) + "</span>" +
           "<span class='pct' style='color:" + corPct(p) + "'>" + p.toFixed(1).replace(".", ",") + "%</span></div>" +
-          "<div class='sub'>Nesta rota · " + (c.paradas || 0) + " paradas"
-          + (c.papel === "APOIO" && c.pulsos ? " · " + c.pulsos + " pulsos" : "") + "</div>" +
+          "<div class='sub'>Nesta rota · " + (c.paradas || 0) + " paradas</div>" +
           "<div style='margin-top:6px'><span class='tag " + classe(p >= 90 ? "FEITA" : (p >= 45 ? "PARCIAL" : "NÃO FEITA")) + "'>" +
           esc(c.papel === "ATUANDO" ? "Atuou" : "Apoio") + "</span></div>";
         btn.onclick = () => {
@@ -773,7 +623,7 @@
       campo.placeholder = nome === "placa" ? "Placa, ex. SDG-1J76" : "Rota, ex. 60DN ou Esmeralda";
       document.getElementById("leg-feitas").hidden = true;
       document.getElementById("leg-faltando").hidden = true;
-      document.getElementById("leg-traco").textContent = "via confirmada pelo pulso";
+      document.getElementById("leg-traco").textContent = "trajeto real do dia";
       if (nome === "frota") {
         carregarDia(document.getElementById("data").value);
         return;
@@ -791,42 +641,38 @@
       document.getElementById("ficha").innerHTML = "";
       grupo.clearLayers();
     }
-    let coletaRodando = false;
-    let vigiaTimer = null;
-    function agendarVigia(ms) {
-      if (vigiaTimer) clearTimeout(vigiaTimer);
-      vigiaTimer = setTimeout(vigiar, ms);
+    async function poll() {
+      const r = await fetch(api("/api/progresso"));
+      const corpo = await r.json();
+      const msgs = corpo.mensagens || [];
+      document.getElementById("status").textContent = msgs.length ? msgs[msgs.length - 1] : "";
+      document.getElementById("atualizar").disabled = !!corpo.rodando;
+      if (corpo.rodando) {
+        timer = setTimeout(poll, 1500);
+        return;
+      }
+      timer = null;
+      if (!corpo.erro && corpo.data) await carregarDia(corpo.data);
     }
-    async function vigiar() {
-      vigiaTimer = null;
-      try {
-        const r = await fetch(api("/api/progresso"));
-        const corpo = await r.json();
-        const msgs = corpo.mensagens || [];
-        if (msgs.length) {
-          let texto = msgs[msgs.length - 1];
-          const cabeca = String(msgs[0] || "");
-          if (cabeca.includes("Mapa ao vivo")) {
-            texto = (cabeca.includes("pulsos") ? "Ao vivo · " : "Ao vivo (mapa) · ") + texto;
-          }
-          document.getElementById("status").textContent = texto;
-        }
-        if (corpo.rodando) {
-          coletaRodando = true;
-          agendarVigia(2000);
-          return;
-        }
-        if (coletaRodando) {
-          coletaRodando = false;
-          if (!corpo.erro && corpo.data) await carregarDia(corpo.data);
-        }
-      } catch (e) { /* o painel tenta de novo */ }
-      agendarVigia(8000);
-    }
-    document.getElementById("ver-original").onchange = () => {
-      if (!cena) return;
-      if (cena.tipo === "frota") desenhar(cena.caminhao, false);
-      else if (cena.rel) desenharRelatorio(cena.rel, cena.placa, false);
+    document.getElementById("atualizar").onclick = async () => {
+      const data = document.getElementById("data").value;
+      document.getElementById("atualizar").disabled = true;
+      document.getElementById("status").textContent = "Horário congelado. Buscando os pulsos até agora...";
+      const r = await fetch(api("/api/coletar"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          data: data,
+          data_fim: document.getElementById("data-fim").value,
+          hora_inicio: document.getElementById("hora-inicio").value,
+          hora_fim: document.getElementById("hora-fim").value
+        })
+      });
+      if (r.status === 409) {
+        document.getElementById("status").textContent = "A coleta deste dia já está rodando.";
+      }
+      if (timer) clearTimeout(timer);
+      poll();
     };
     document.getElementById("aba-frota").onclick = () => aba("frota");
     document.getElementById("aba-rota").onclick = () => aba("rota");
@@ -850,7 +696,6 @@
         desenhar(null);
       }
     });
-    vigiar();
   </script>
 </body>
 </html>
