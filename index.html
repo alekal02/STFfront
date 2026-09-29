@@ -183,7 +183,9 @@
     <div style="position:relative; min-height:0;">
       <div id="mapa"></div>
       <div class="legenda">
-        <div id="leg-traco-linha"><i class="sw" style="background:#1d4e89"></i> <span id="leg-traco">trajeto real do dia</span></div>
+        <div id="leg-traco-linha"><i class="sw" style="background:#1d4e89"></i> <span id="leg-traco">via confirmada pelo pulso</span></div>
+        <div><i class="sw" style="background:transparent;border-top:3px dashed #1d4e89;height:0;border-radius:0"></i> estimado na via, até o próximo pulso</div>
+        <div id="leg-original" hidden><i class="sw" style="background:#64748b"></i> pulsos originais, sem cortar quadra</div>
         <div id="legenda-caminhoes"></div>
         <div><i class="sw" style="background:#8a6a12"></i> polígono oficial da rota</div>
         <div id="leg-feitas" hidden><i class="sw" style="background:#0f7a44"></i> ruas feitas nesta rota</div>
@@ -367,22 +369,56 @@
       const foco = [];
       desenharRotasDoDia(foco);
       pintarLegendaCaminhoes(todos, true);
+      const original = document.getElementById("leg-original");
+      if (original) original.hidden = !caminhao;
       lista.forEach((c) => {
         const indice = Math.max(0, todos.findIndex((item) => item.placa === c.placa));
         const cor = CORES_CAMINHAO[indice % CORES_CAMINHAO.length];
         const nome = (c.prefixo ? c.prefixo + " · " : "") + (c.placa || "Caminhão");
-        (c.gps || []).forEach((pts) => {
-          linha(pts, { color: "#ffffff", weight: caminhao ? 8 : 5, opacity: 0.85 });
-          const layer = L.polyline(pts, { color: cor, weight: caminhao ? 4 : 3, opacity: 0.95 });
-          layer.bindPopup("<b>" + esc(nome) + "</b>");
-          grupo.addLayer(layer);
-          foco.push(layer);
-        });
+        desenharTrajeto(c, cor, nome, foco, !!caminhao);
         const saida = marcarSaida(c.saida);
         if (saida) foco.push(saida);
         desenharColeta(c, foco);
       });
       if (foco.length) mapa.fitBounds(L.featureGroup(foco).getBounds(), { padding: [28, 28], maxZoom: caminhao ? 16 : 13 });
+    }
+    function textoCasa(c) {
+      const k = c.casamento || {};
+      if (!k.confirmado && !k.estimado && !k.indeterminado) return "Trajeto na via oficial";
+      return "Via confirmada: " + (k.confirmado || 0)
+        + "<br>Estimado até o próximo pulso: " + (k.estimado || 0)
+        + "<br>Salto sem via compatível: " + (k.indeterminado || 0);
+    }
+    function desenharTrajeto(c, cor, nome, foco, um) {
+      if (um) {
+        (c.gps_original || []).forEach((pts) => {
+          if (!pts || pts.length < 2) return;
+          const layer = L.polyline(pts, { color: "#64748b", weight: 2, opacity: 0.7 });
+          layer.bindPopup("<b>" + esc(nome) + "</b><br>Pulsos originais. O salto longo não corta a quadra.");
+          grupo.addLayer(layer);
+          foco.push(layer);
+        });
+      }
+      (c.gps || []).forEach((pts) => {
+        if (!pts || pts.length < 2) return;
+        linha(pts, { color: "#ffffff", weight: um ? 8 : 5, opacity: 0.85 });
+        const layer = L.polyline(pts, { color: cor, weight: um ? 4 : 3, opacity: 0.95 });
+        layer.bindPopup("<b>" + esc(nome) + "</b><br>" + textoCasa(c));
+        grupo.addLayer(layer);
+        foco.push(layer);
+      });
+      (c.gps_estimado || []).forEach((pts) => {
+        if (!pts || pts.length < 2) return;
+        const layer = L.polyline(pts, {
+          color: cor,
+          weight: um ? 4 : 3,
+          opacity: 0.95,
+          dashArray: "8 7"
+        });
+        layer.bindPopup("<b>" + esc(nome) + "</b><br>Caminho estimado na via até o próximo pulso. Não conta como rua feita.");
+        grupo.addLayer(layer);
+        foco.push(layer);
+      });
     }
     function trilhas(lista, opt, foco) {
       (lista || []).forEach((pts) => {
@@ -429,7 +465,7 @@
       const feitos = caminhao ? caminhao.feitos : (setor && setor.feitos);
       document.getElementById("leg-feitas").hidden = !rota;
       document.getElementById("leg-faltando").hidden = !rota;
-      document.getElementById("leg-traco").textContent = rota ? "trajeto nesta rota" : "trajeto real do dia";
+      document.getElementById("leg-traco").textContent = rota ? "via confirmada nesta rota" : "via confirmada pelo pulso";
       if (rota) {
         trilhas(faltando, { color: "#b42318", weight: 4, opacity: 0.85 }, foco);
         trilhas(feitos, { color: "#0f7a44", weight: 5, opacity: 0.95 }, foco);
@@ -459,13 +495,26 @@
         const indice = daRota.findIndex((item) => item.placa === c.placa);
         const cor = passagem ? "#64748b" : CORES_CAMINHAO[(indice < 0 ? 0 : indice) % CORES_CAMINHAO.length];
         const nome = (c.prefixo ? c.prefixo + " · " : "") + (c.placa || "");
+        const aviso = c.papel === "APOIO" ? "Apoio nesta rota" : "Atuou nesta rota";
         (c.gps || []).forEach((pts) => {
           const layer = L.polyline(pts, {
             color: cor,
             weight: passagem ? 2 : 5,
             opacity: passagem ? 0.55 : 0.95
           });
-          layer.bindPopup("<b>" + esc(nome) + "</b><br>" + (c.papel === "APOIO" ? "Apoio nesta rota" : "Atuou nesta rota"));
+          layer.bindPopup("<b>" + esc(nome) + "</b><br>" + aviso);
+          grupo.addLayer(layer);
+          foco.push(layer);
+        });
+        (c.gps_estimado || []).forEach((pts) => {
+          if (!pts || pts.length < 2) return;
+          const layer = L.polyline(pts, {
+            color: cor,
+            weight: passagem ? 2 : 4,
+            opacity: 0.9,
+            dashArray: "8 7"
+          });
+          layer.bindPopup("<b>" + esc(nome) + "</b><br>Estimado na via até o próximo pulso. Não conta como rua feita.");
           grupo.addLayer(layer);
           foco.push(layer);
         });
@@ -681,7 +730,7 @@
       campo.placeholder = nome === "placa" ? "Placa, ex. SDG-1J76" : "Rota, ex. 60DN ou Esmeralda";
       document.getElementById("leg-feitas").hidden = true;
       document.getElementById("leg-faltando").hidden = true;
-      document.getElementById("leg-traco").textContent = "trajeto real do dia";
+      document.getElementById("leg-traco").textContent = "via confirmada pelo pulso";
       if (nome === "frota") {
         carregarDia(document.getElementById("data").value);
         return;
