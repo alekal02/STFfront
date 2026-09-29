@@ -521,21 +521,34 @@
     async function carregarDia(data) {
       const r = await fetch(api("/api/dia?data=" + encodeURIComponent(data)));
       const corpo = await r.json();
-      const rel = await fetch(api("/api/relatorio?tipo=frota&data=" + encodeURIComponent(data)));
-      const frota = await rel.json();
-      if (corpo && corpo.caminhoes) {
-        resumo = corpo;
-        if (frota && frota.caminhoes && frota.caminhoes.length) resumo.caminhoes = frota.caminhoes;
-        resumo.balanco = (frota && frota.balanco) || [];
-        setoresDia = (frota && frota.setores) || [];
-        ativo = null;
-        modo = "frota";
-        document.querySelectorAll(".abas button").forEach((b) => b.classList.remove("ativo"));
-        document.getElementById("aba-frota").classList.add("ativo");
-        document.getElementById("busca").hidden = true;
+      if (!(corpo && corpo.caminhoes)) return;
+      resumo = corpo;
+      ativo = null;
+      modo = "frota";
+      document.querySelectorAll(".abas button").forEach((b) => b.classList.remove("ativo"));
+      document.getElementById("aba-frota").classList.add("ativo");
+      document.getElementById("busca").hidden = true;
+      pintar();
+      desenhar(null);
+      try {
+        const rel = await fetch(api("/api/relatorio?tipo=frota&data=" + encodeURIComponent(data)));
+        const frota = await rel.json();
+        if (!frota || frota.erro) return;
+        const gpsPorPlaca = {};
+        (resumo.caminhoes || []).forEach((c) => { gpsPorPlaca[c.placa] = c.gps || []; });
+        if (frota.caminhoes && frota.caminhoes.length) {
+          resumo.caminhoes = frota.caminhoes.map((c) => ({
+            ...c,
+            gps: (c.gps && c.gps.length) ? c.gps : (gpsPorPlaca[c.placa] || [])
+          }));
+        }
+        resumo.balanco = frota.balanco || [];
+        setoresDia = frota.setores || [];
         ficha(frota.texto || []);
         pintar();
         desenhar(null);
+      } catch (e) {
+        document.getElementById("status").textContent = "A frota foi salva. O mapa usa os pulsos já gravados.";
       }
     }
     function pintarCandidatos(rel) {
