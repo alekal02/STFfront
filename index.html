@@ -803,7 +803,14 @@
         const r = await fetch(api("/api/progresso"));
         const corpo = await r.json();
         const msgs = corpo.mensagens || [];
-        if (msgs.length) document.getElementById("status").textContent = msgs[msgs.length - 1];
+        if (msgs.length) {
+          let texto = msgs[msgs.length - 1];
+          const cabeca = String(msgs[0] || "");
+          if (cabeca.includes("Mapa ao vivo")) {
+            texto = (cabeca.includes("pulsos") ? "Ao vivo · " : "Ao vivo (mapa) · ") + texto;
+          }
+          document.getElementById("status").textContent = texto;
+        }
         if (corpo.rodando) {
           coletaRodando = true;
           agendarVigia(2000);
