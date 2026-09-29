@@ -70,6 +70,12 @@
       background: transparent;
     }
     .dica { font-size: 11px; color: var(--muted); align-self: center; max-width: 110px; line-height: 1.2; }
+    .andamento { min-width: 240px; max-width: 320px; align-self: center; }
+    .andamento-linha { display: flex; gap: 8px; align-items: baseline; font-size: 12px; }
+    .andamento-linha b { color: var(--tinta); }
+    #andamento-log { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .andamento-trilho { margin-top: 4px; height: 6px; background: #e7e5e4; border-radius: 99px; overflow: hidden; }
+    .andamento-trilho i { display: block; height: 100%; width: 0; background: #1d4e89; }
     main { display: grid; grid-template-columns: 360px 1fr; min-height: 0; }
     aside {
       background: var(--papel);
@@ -157,6 +163,10 @@
       <label>Data fim <input id="data-fim" type="date" /></label>
       <label>Hora fim <input id="hora-fim" type="time" value="05:59" /></label>
       <button id="atualizar" type="button">Atualizar frota</button>
+      <div id="andamento" class="andamento" hidden>
+        <div class="andamento-linha"><b id="andamento-pct">0%</b><span id="andamento-log">Preparando</span></div>
+        <div class="andamento-trilho"><i id="andamento-barra"></i></div>
+      </div>
       <span class="dica">PDF da frota no WhatsApp a cada 1 h</span>
       <a class="atalho" href="whatsapp.html">WhatsApp</a>
       <div id="status"></div>
@@ -688,23 +698,53 @@
       document.getElementById("ficha").innerHTML = "";
       grupo.clearLayers();
     }
-    async function poll() {
-      const r = await fetch(api("/api/progresso"));
-      const corpo = await r.json();
+    let seguindo = false;
+    function pintarAndamento(corpo) {
+      const box = document.getElementById("andamento");
       const msgs = corpo.mensagens || [];
-      document.getElementById("status").textContent = msgs.length ? msgs[msgs.length - 1] : "";
+      const texto = corpo.texto || (msgs.length ? msgs[msgs.length - 1] : "Preparando a frota");
+      const pct = Math.max(0, Math.min(100, Number(corpo.pct) || 0));
       document.getElementById("atualizar").disabled = !!corpo.rodando;
-      if (corpo.rodando) {
-        timer = setTimeout(poll, 1500);
+      document.getElementById("status").textContent = corpo.rodando ? "" : (corpo.erro || "");
+      if (!corpo.rodando) {
+        box.hidden = true;
         return;
       }
-      timer = null;
-      if (!corpo.erro && corpo.data) await carregarDia(corpo.data);
+      box.hidden = false;
+      document.getElementById("andamento-pct").textContent = pct + "%";
+      document.getElementById("andamento-log").textContent = texto;
+      document.getElementById("andamento-barra").style.width = pct + "%";
+    }
+    function agendarVigia(ms) {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(vigiar, ms);
+    }
+    async function vigiar() {
+      try {
+        const r = await fetch(api("/api/progresso"));
+        const corpo = await r.json();
+        pintarAndamento(corpo);
+        if (corpo.rodando) {
+          seguindo = true;
+          agendarVigia(1500);
+          return;
+        }
+        if (seguindo && !corpo.erro && corpo.data) {
+          seguindo = false;
+          document.getElementById("data").value = corpo.data;
+          await carregarDia(corpo.data);
+        }
+      } catch (e) {}
+      agendarVigia(5000);
     }
     document.getElementById("atualizar").onclick = async () => {
       const data = document.getElementById("data").value;
+      seguindo = true;
       document.getElementById("atualizar").disabled = true;
-      document.getElementById("status").textContent = "Horário congelado. Buscando os pulsos até agora...";
+      document.getElementById("andamento").hidden = false;
+      document.getElementById("andamento-pct").textContent = "3%";
+      document.getElementById("andamento-log").textContent = "Horário congelado. Buscando os pulsos até agora...";
+      document.getElementById("andamento-barra").style.width = "3%";
       const r = await fetch(api("/api/coletar"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -716,10 +756,9 @@
         })
       });
       if (r.status === 409) {
-        document.getElementById("status").textContent = "A coleta deste dia já está rodando.";
+        document.getElementById("andamento-log").textContent = "A frota já está fechando. O mapa atualiza quando terminar.";
       }
-      if (timer) clearTimeout(timer);
-      poll();
+      agendarVigia(400);
     };
     document.getElementById("aba-frota").onclick = () => aba("frota");
     document.getElementById("aba-rota").onclick = () => aba("rota");
@@ -743,6 +782,7 @@
         desenhar(null);
       }
     });
+    agendarVigia(800);
   </script>
 </body>
 </html>
