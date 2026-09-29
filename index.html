@@ -157,7 +157,7 @@
       <label>Data fim <input id="data-fim" type="date" /></label>
       <label>Hora fim <input id="hora-fim" type="time" value="05:59" /></label>
       <button id="atualizar" type="button">Atualizar frota</button>
-      <span class="dica">Pedido no grupo ou neste botão. Sem consulta automática.</span>
+      <span class="dica">A frota fica salva por 1 h. A rota pode ser pedida de novo.</span>
       <a class="atalho" href="whatsapp.html">WhatsApp</a>
       <div id="status"></div>
     </div>
@@ -719,10 +719,16 @@
         document.getElementById("atualizar").disabled = false;
         return;
       }
+      const corpo = await r.json().catch(() => ({}));
       if (!r.ok) {
-        const corpo = await r.json().catch(() => ({}));
         document.getElementById("status").textContent = corpo.erro || "Não foi possível buscar os pulsos.";
         document.getElementById("atualizar").disabled = false;
+        return;
+      }
+      if (corpo.reutilizado) {
+        document.getElementById("status").textContent = "A conta desta hora continua no mapa. Os pulsos não foram pedidos de novo.";
+        document.getElementById("atualizar").disabled = false;
+        if (corpo.data) await carregarDia(corpo.data);
         return;
       }
       coletaRodando = true;
