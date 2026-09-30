@@ -155,6 +155,7 @@
       <label>Hora início <input id="hora-inicio" type="time" value="06:00" /></label>
       <label>Data fim <input id="data-fim" type="date" /></label>
       <label>Hora fim <input id="hora-fim" type="time" value="05:59" /></label>
+      <button id="atualizar" type="button">Atualizar frota</button>
       <a class="atalho" href="whatsapp.html">WhatsApp</a>
       <div id="status"></div>
     </div>
@@ -181,10 +182,11 @@
     <div style="position:relative; min-height:0;">
       <div id="mapa"></div>
       <div class="legenda">
-        <div><i class="sw" style="background:#1d4e89"></i> <span id="leg-traco">trajeto no eixo da rua</span></div>
-        <div><i class="sw" style="background:#c2410c"></i> polígono oficial da rota</div>
+        <div><i class="sw" style="background:#1d4e89"></i> <span id="leg-traco">trajeto real do dia</span></div>
+        <div><i class="sw" style="background:#8a6a12"></i> polígono oficial da rota</div>
         <div id="leg-feitas" hidden><i class="sw" style="background:#0f7a44"></i> ruas feitas nesta rota</div>
         <div id="leg-faltando" hidden><i class="sw" style="background:#b42318"></i> ruas que faltam nesta rota</div>
+        <div><i class="sw" style="background:#c2410c;height:8px;border-radius:99px"></i> parada dentro da rota</div>
         <div><i class="sw" style="background:#0f766e"></i> base, saída do turno</div>
         <div><i class="sw" style="background:#9a3412"></i> aterro, descarga</div>
       </div>
@@ -193,26 +195,11 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="config.js"></script>
   <script>
-    const mapa = L.map("mapa", { attributionControl: false }).setView([-16.82, -49.24], 12);
-    L.control.attribution({ prefix: false }).addTo(mapa);
-    const mapboxToken = String(window.SAGTRACK_MAPBOX_TOKEN || "").trim();
-    if (mapboxToken) {
-      L.tileLayer(
-        "https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/{z}/{x}/{y}?access_token=" + encodeURIComponent(mapboxToken),
-        {
-          attribution: '&copy; <a href="https://www.mapbox.com/about/maps/">Mapbox</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-          tileSize: 512,
-          zoomOffset: -1,
-          maxZoom: 22,
-        }
-      ).addTo(mapa);
-    } else {
-      L.tileLayer("https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png", {
-        attribution: "&copy; OpenStreetMap",
-        maxZoom: 19,
-        subdomains: "abc",
-      }).addTo(mapa);
-    }
+    const mapa = L.map("mapa").setView([-16.82, -49.24], 12);
+    L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}", {
+      attribution: "Esri",
+      maxZoom: 19
+    }).addTo(mapa);
     let grupo = L.layerGroup().addTo(mapa);
     let locaisLayer = L.layerGroup().addTo(mapa);
     let resumo = null;
@@ -245,8 +232,8 @@
     ajustarDataFim();
 
     function corPct(pct) {
-      if (pct >= 70) return "#1f7a4d";
-      if (pct >= 20) return "#a56b00";
+      if (pct >= 90) return "#1f7a4d";
+      if (pct >= 45) return "#a56b00";
       return "#b42318";
     }
     function classe(ver) {
@@ -292,21 +279,21 @@
       grupo.addLayer(m);
       return m;
     }
-    const CORES_CAMINHAO = [
-      "#1d4ed9", "#b42318", "#0f7a44", "#7c3aed", "#b45309",
-      "#0f766e", "#be185d", "#4338ca", "#0284c7", "#7c2d12",
-      "#16a34a", "#d97706", "#0ea5e9", "#7f1d1d"
-    ];
-    function corPlaca(placa) {
-      const t = String(placa || "").toUpperCase();
-      if (!t) return CORES_CAMINHAO[0];
-      let h = 0;
-      for (let i = 0; i < t.length; i++) h += t.charCodeAt(i);
-      return CORES_CAMINHAO[h % CORES_CAMINHAO.length];
-    }
-    function marcarParadas(_pontos, _rota, _cor) {
-      // Relatórios e painel: só a trajetória — sem bolinhas de parada de coleta.
-      return [];
+    const CORES_COLETA = ["#c2410c", "#1f7a4d", "#1d4e89", "#7c3aed", "#a56b00", "#0f766e"];
+    function marcarParadas(pontos, rota, cor) {
+      const marcas = [];
+      (pontos || []).forEach((p) => {
+        if (p.latitude == null) return;
+        const m = L.circleMarker([p.latitude, p.longitude], {
+          radius: 6, color: "#fff", weight: 2, fillColor: cor || "#c2410c", fillOpacity: 1
+        });
+        const min = Math.round((p.segundos || 0) / 60);
+        const hora = p.inicio ? p.inicio + "–" + (p.fim || "") : "";
+        m.bindPopup("<b>" + (rota || "Parada de coleta") + "</b>" + (hora ? "<br>" + hora : "") + (min ? "<br>" + min + " min" : ""));
+        grupo.addLayer(m);
+        marcas.push(m);
+      });
+      return marcas;
     }
     function rotasComColeta(caminhao) {
       return (caminhao.tocados || []).filter((t) => t.papel === "ATUANDO" || t.papel === "APOIO");
@@ -328,7 +315,7 @@
     }
     function desenharColeta(caminhao, foco) {
       rotasComColeta(caminhao).forEach((t, i) => {
-        const cor = CORES_CAMINHAO[i % CORES_CAMINHAO.length];
+        const cor = CORES_COLETA[i % CORES_COLETA.length];
         aneisDe(t).forEach((anel) => {
           const poly = poligono(anel, { color: cor, weight: 3, fillColor: cor, fillOpacity: 0.12 });
           if (!poly) return;
@@ -361,11 +348,9 @@
       const lista = caminhao ? [caminhao] : ((resumo && resumo.caminhoes) || []);
       const foco = [];
       lista.forEach((c) => {
-        const cor = corPlaca(c.placa);
         (c.gps || []).forEach((pts) => {
           linha(pts, { color: "#ffffff", weight: caminhao ? 8 : 5, opacity: 0.85 });
-          const layer = L.polyline(pts, { color: cor, weight: caminhao ? 5 : 3.5, opacity: 0.95 });
-          layer.bindPopup("<b>" + (c.prefixo ? c.prefixo + " · " : "") + (c.placa || "Caminhão") + "</b>");
+          const layer = L.polyline(pts, { color: "#1d4e89", weight: caminhao ? 4 : 3, opacity: 0.9 });
           grupo.addLayer(layer);
           foco.push(layer);
         });
@@ -391,11 +376,12 @@
       const setor = (rel.setores || [])[0];
       const faltando = caminhao ? caminhao.faltando : (setor && setor.faltando);
       const feitos = caminhao ? caminhao.feitos : (setor && setor.feitos);
-      document.getElementById("leg-feitas").hidden = true;
+      document.getElementById("leg-feitas").hidden = !rota;
       document.getElementById("leg-faltando").hidden = !rota;
-      document.getElementById("leg-traco").textContent = "caminho real (cor por caminhão)";
+      document.getElementById("leg-traco").textContent = rota ? "trajeto nesta rota" : "trajeto real do dia";
       if (rota) {
         trilhas(faltando, { color: "#b42318", weight: 4, opacity: 0.85 }, foco);
+        trilhas(feitos, { color: "#0f7a44", weight: 5, opacity: 0.95 }, foco);
       }
       (rel.setores || []).forEach((item) => {
         const papel = item.papel || "";
@@ -417,16 +403,12 @@
       caminhoes.forEach((c) => {
         if (rota && !caminhao && c.papel !== "ATUANDO" && c.papel !== "APOIO") return;
         const passagem = c.papel === "PASSAGEM";
-        const cor = passagem ? "#64748b" : corPlaca(c.placa);
-        // Sempre o GPS do caminhão — não a malha de ruas cobertas.
         (c.gps || []).forEach((pts) => {
-          linha(pts, { color: "#ffffff", weight: passagem ? 3 : 7, opacity: 0.85 });
           const layer = L.polyline(pts, {
-            color: cor,
-            weight: passagem ? 2 : 5,
-            opacity: passagem ? 0.55 : 0.95
+            color: passagem ? "#64748b" : "#1d4e89",
+            weight: passagem ? 2 : 4,
+            opacity: passagem ? 0.55 : 0.9
           });
-          layer.bindPopup("<b>" + (c.prefixo ? c.prefixo + " · " : "") + (c.placa || "Caminhão") + "</b>");
           grupo.addLayer(layer);
           foco.push(layer);
         });
@@ -484,18 +466,16 @@
       }
       caminhoes.forEach((c, i) => {
         const pct = num(c.percentual);
-        const corLinha = corPlaca(c.placa);
         const btn = document.createElement("button");
         btn.type = "button";
         btn.className = "item" + (ativo === i ? " ativo" : "");
         btn.innerHTML =
-          "<div class='topo'><span class='placa'><i class='sw' style='background:" + corLinha + ";display:inline-block;width:12px;height:12px;border-radius:99px;margin-right:6px;vertical-align:-1px'></i>" +
-          (c.prefixo ? c.prefixo + " · " + (c.placa || "") : (c.placa || "—")) + "</span>" +
+          "<div class='topo'><span class='placa'>" + (c.prefixo ? c.prefixo + " · " + (c.placa || "") : (c.placa || "—")) + "</span>" +
           "<span class='pct' style='color:" + corPct(pct) + "'>" + pct.toFixed(1).replace(".", ",") + "%</span></div>" +
           "<div class='sub'>" + (c.veiculo || "") + "</div>" +
           "<div class='sub'>" + (c.setor || "Sem setor identificado") + (c.paradas ? " · " + c.paradas + " paradas" : "") + "</div>" +
           "<div style='margin-top:6px'><span class='tag " + classe(c.veredicto) + "'>" + rotulo(c.veredicto) + "</span></div>" +
-          "<div class='barra'><i style='width:" + Math.max(0, Math.min(100, pct)) + "%;background:" + corLinha + "'></i></div>";
+          "<div class='barra'><i style='width:" + Math.max(0, Math.min(100, pct)) + "%;background:" + corPct(pct) + "'></i></div>";
         btn.onclick = () => {
           ativo = i;
           pintar();
@@ -577,7 +557,7 @@
           "<div class='topo'><span class='placa'>" + esc(c.prefixo ? c.prefixo + " · " + (c.placa || "") : (c.placa || "—")) + "</span>" +
           "<span class='pct' style='color:" + corPct(p) + "'>" + p.toFixed(1).replace(".", ",") + "%</span></div>" +
           "<div class='sub'>Nesta rota · " + (c.paradas || 0) + " paradas</div>" +
-          "<div style='margin-top:6px'><span class='tag " + classe(p >= 70 ? "FEITA" : (p >= 20 ? "PARCIAL" : "NÃO FEITA")) + "'>" +
+          "<div style='margin-top:6px'><span class='tag " + classe(p >= 90 ? "FEITA" : (p >= 45 ? "PARCIAL" : "NÃO FEITA")) + "'>" +
           esc(c.papel === "ATUANDO" ? "Atuou" : "Apoio") + "</span></div>";
         btn.onclick = () => {
           ativo = i;
@@ -662,21 +642,38 @@
       grupo.clearLayers();
     }
     async function poll() {
-      try {
-        const r = await fetch(api("/api/progresso"));
-        const corpo = await r.json();
-        const msgs = corpo.mensagens || [];
-        document.getElementById("status").textContent = msgs.length
-          ? msgs[msgs.length - 1]
-          : (corpo.rodando ? "Atualizando frota pelo WhatsApp..." : "");
-        if (corpo.rodando) {
-          timer = setTimeout(poll, 1500);
-          return;
-        }
-        if (corpo.data) await carregarDia(corpo.data);
-      } catch (e) { /* tenta de novo */ }
-      timer = setTimeout(poll, 8000);
+      const r = await fetch(api("/api/progresso"));
+      const corpo = await r.json();
+      const msgs = corpo.mensagens || [];
+      document.getElementById("status").textContent = msgs.length ? msgs[msgs.length - 1] : "";
+      document.getElementById("atualizar").disabled = !!corpo.rodando;
+      if (corpo.rodando) {
+        timer = setTimeout(poll, 1500);
+        return;
+      }
+      timer = null;
+      if (!corpo.erro && corpo.data) await carregarDia(corpo.data);
     }
+    document.getElementById("atualizar").onclick = async () => {
+      const data = document.getElementById("data").value;
+      document.getElementById("atualizar").disabled = true;
+      document.getElementById("status").textContent = "Horário congelado. Buscando os pulsos até agora...";
+      const r = await fetch(api("/api/coletar"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          data: data,
+          data_fim: document.getElementById("data-fim").value,
+          hora_inicio: document.getElementById("hora-inicio").value,
+          hora_fim: document.getElementById("hora-fim").value
+        })
+      });
+      if (r.status === 409) {
+        document.getElementById("status").textContent = "A coleta deste dia já está rodando.";
+      }
+      if (timer) clearTimeout(timer);
+      poll();
+    };
     document.getElementById("aba-frota").onclick = () => aba("frota");
     document.getElementById("aba-rota").onclick = () => aba("rota");
     document.getElementById("aba-placa").onclick = () => aba("placa");
@@ -699,7 +696,6 @@
         desenhar(null);
       }
     });
-    poll();
   </script>
 </body>
 </html>
