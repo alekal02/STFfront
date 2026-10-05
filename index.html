@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Sala técnica</title>
   <script src="config.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
     :root {
       --ink: #102028;
@@ -600,7 +602,12 @@
     .vivo-apoio { margin-top: 8px; display: flex; justify-content: space-between; align-items: center; }
     .vivo-apoio strong { margin: 0; font-size: 22px; color: #5b4b8a; }
     .vivo-corpo { display: grid; grid-template-columns: 1.3fr .9fr; gap: 12px; min-height: 0; }
-    .vivo-mapa iframe { width: 100%; height: min(68vh, 720px); min-height: 420px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+    .vivo-folha { width: 100%; height: min(68vh, 720px); min-height: 420px; border: 1px solid var(--line); border-radius: 10px; background: #e7eef2; }
+    .vivo-mapa-acoes { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+    .vivo-mapa-acoes button, .vivo-popup button { background: var(--teal); color: #fff; border: 0; border-radius: 8px; padding: 6px 10px; font-weight: 700; cursor: pointer; }
+    .vivo-popup { font-size: 13px; line-height: 1.45; min-width: 180px; }
+    .vivo-popup b { display: inline-block; min-width: 78px; }
+    .leaflet-control-layers-expanded { font-size: 12px; line-height: 1.35; }
     .vivo-legenda { display: flex; flex-wrap: wrap; gap: 10px; margin: 8px 0 0; color: var(--muted); font-size: 12px; }
     .vivo-legenda i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; }
     .vivo-filtros { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
@@ -799,7 +806,11 @@
     <section class="card">
       <div class="vivo-corpo">
         <div class="vivo-mapa">
-          <iframe id="vivo-mapa" title="Mapa do turno"></iframe>
+          <div id="vivo-folha" class="vivo-folha"></div>
+          <div class="vivo-mapa-acoes">
+            <button type="button" id="vivo-so" hidden>Ver somente esta rota</button>
+            <button type="button" id="vivo-todas" hidden>Mostrar todas</button>
+          </div>
           <p class="vivo-legenda">
             <span><i style="background:#1b8a5a"></i>Concluída</span>
             <span><i style="background:#c56a1a"></i>Parcial</span>
@@ -2706,16 +2717,340 @@
         ["Tempo entre entrada e saída", rota.tempo_em_rota || "—"],
         ["Execução", (Number(rota.percentual) || 0).toFixed(0) + "%"],
         ["Status", rota.status],
+        ["Entrada", rota.entrada_hora || "—"],
+        ["Saída", rota.saida_hora || "—"],
         ["Km no polígono", rota.km_coleta || "—"],
         ["Km oficial", rota.km_oficial || "—"],
       ];
       box.innerHTML = linhas.map(([k, v]) => `<div><b>${k}:</b> ${v || "—"}</div>`).join("");
     }
 
+    const CORES_VIVO = {
+      concluida: "#1b8a5a",
+      parcial: "#c56a1a",
+      inicio: "#1d6a8a",
+      nao: "#b7c3c9",
+      passagem: "#8a3d3d",
+      apoio: "#5b4b8a",
+    };
+    let vivoMapa = null;
+    let vivoCamadas = {};
+    let vivoTrilha = {};
+    let vivoPosicao = {};
+    let vivoGrupoRotas = null;
+    let vivoGrupoTrilha = null;
+    let vivoGrupoPos = null;
+    let vivoGrupoEnt = null;
+    let vivoGrupoSai = null;
+    let vivoGrupoFeitos = null;
+    let vivoGrupoFalta = null;
+    let vivoChaveMapa = "";
+    let vivoEtag = "";
+    let vivoEtags = {};
+    let vivoGeoCache = {};
+    let vivoCursor = "";
+    let vivoVistos = new Set();
+    let vivoFoco = "";
+    let vivoDesenhoMs = 0;
+
+    function escaparVivo(texto) {
+      return String(texto ?? "").replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
+    }
+
+    function rotaVivo(codigo) {
+      return ((vivoEstado && vivoEstado.rotas) || []).find((r) => r.codigo === codigo) || null;
+    }
+
+    function corRota(codigo) {
+      const rota = rotaVivo(codigo);
+      return CORES_VIVO[(rota && rota.grupo) || "nao"] || CORES_VIVO.nao;
+    }
+
+    function estiloRota(codigo, opacidade) {
+      const foco = !vivoFoco || vivoFoco === codigo;
+      return {
+        color: corRota(codigo),
+        weight: foco && vivoFoco === codigo ? 4 : 2,
+        fillColor: corRota(codigo),
+        fillOpacity: vivoFoco && vivoFoco !== codigo ? 0.05 : (opacidade == null ? 0.28 : opacidade),
+        opacity: vivoFoco && vivoFoco !== codigo ? 0.25 : 1,
+      };
+    }
+
+    function htmlPopup(codigo) {
+      const r = rotaVivo(codigo) || { codigo };
+      const pct = (Number(r.percentual) || 0).toFixed(0) + "%";
+      const linhas = [
+        ["Rota", r.codigo || codigo],
+        ["Veículo", r.veiculo || "—"],
+        ["Placa", r.placa || "—"],
+        ["Status", r.status || "—"],
+        ["Execução", pct],
+        ["Início", r.inicio || "—"],
+        ["Último GPS", r.ultimo_gps || "—"],
+        ["Entrada", r.entrada_hora || "—"],
+        ["Saída", r.saida_hora || "—"],
+      ];
+      return `<div class="vivo-popup">${linhas.map(([k, v]) => `<div><b>${k}</b> ${escaparVivo(v)}</div>`).join("")}<button type="button" class="vivo-so-rota" data-codigo="${escaparVivo(codigo)}">Ver somente esta rota</button></div>`;
+    }
+
+    function garantirMapaVivo() {
+      if (vivoMapa || !window.L) return vivoMapa;
+      const folha = $("vivo-folha");
+      if (!folha) return null;
+      vivoMapa = L.map(folha, { zoomControl: true }).setView([-16.82, -49.24], 12);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "&copy; OpenStreetMap",
+        maxZoom: 19,
+      }).addTo(vivoMapa);
+      vivoGrupoRotas = L.featureGroup().addTo(vivoMapa);
+      vivoGrupoTrilha = L.layerGroup().addTo(vivoMapa);
+      vivoGrupoPos = L.layerGroup().addTo(vivoMapa);
+      vivoGrupoEnt = L.layerGroup();
+      vivoGrupoSai = L.layerGroup();
+      vivoGrupoFeitos = L.layerGroup();
+      vivoGrupoFalta = L.layerGroup();
+      L.control.layers(null, {
+        "Rotas oficiais": vivoGrupoRotas,
+        "Trajetória GPS": vivoGrupoTrilha,
+        "Posição atual": vivoGrupoPos,
+        "Entrada": vivoGrupoEnt,
+        "Saída": vivoGrupoSai,
+        "Trechos executados": vivoGrupoFeitos,
+        "Trechos faltantes": vivoGrupoFalta,
+      }, { collapsed: false }).addTo(vivoMapa);
+      window.vivoMapa = vivoMapa;
+      setTimeout(() => vivoMapa && vivoMapa.invalidateSize(), 50);
+      return vivoMapa;
+    }
+
+    function atualizarEstiloRotas() {
+      Object.entries(vivoCamadas).forEach(([codigo, layer]) => {
+        layer.setStyle(estiloRota(codigo));
+        if (layer.getPopup()) layer.setPopupContent(htmlPopup(codigo));
+      });
+    }
+
+    function desenharPosicoes() {
+      const lista = (vivoEstado && vivoEstado.posicoes) || [];
+      const vistos = new Set();
+      lista.forEach((pos) => {
+        if (pos.lat == null || pos.lon == null) return;
+        vistos.add(pos.placa);
+        const marca = vivoPosicao[pos.placa];
+        if (marca) marca.setLatLng([pos.lat, pos.lon]);
+        else {
+          vivoPosicao[pos.placa] = L.circleMarker([pos.lat, pos.lon], {
+            radius: 7,
+            color: "#102028",
+            weight: 2,
+            fillColor: "#f2c14e",
+            fillOpacity: 0.95,
+          }).bindTooltip(pos.placa || "", { permanent: false }).addTo(vivoGrupoPos);
+        }
+      });
+      Object.keys(vivoPosicao).forEach((placa) => {
+        if (!vistos.has(placa)) {
+          vivoGrupoPos.removeLayer(vivoPosicao[placa]);
+          delete vivoPosicao[placa];
+        }
+      });
+    }
+
+    function acrescentarPonto(ponto) {
+      const chave = ponto.placa + "|" + ponto.ts;
+      if (vivoVistos.has(chave)) return;
+      vivoVistos.add(chave);
+      const latlng = [ponto.lat, ponto.lon];
+      const linha = vivoTrilha[ponto.placa];
+      if (linha) linha.addLatLng(latlng);
+      else vivoTrilha[ponto.placa] = L.polyline([latlng], { color: "#17324d", weight: 3, opacity: 0.85 }).addTo(vivoGrupoTrilha);
+      const marca = vivoPosicao[ponto.placa];
+      if (marca) marca.setLatLng(latlng);
+    }
+
+    function desenharColecao(colecao, t0) {
+      vivoGrupoRotas.clearLayers();
+      vivoCamadas = {};
+      L.geoJSON(colecao, {
+        style: (feat) => estiloRota((feat.properties && feat.properties.codigo) || feat.id),
+        onEachFeature: (feat, layer) => {
+          const codigo = (feat.properties && feat.properties.codigo) || feat.id;
+          vivoCamadas[codigo] = layer;
+          layer.bindPopup(htmlPopup(codigo));
+          layer.on("click", () => {
+            vivoCodigo = codigo;
+            pintarTabelaVivo();
+            pintarDetalheVivo(rotaVivo(codigo));
+            const tr = document.querySelector('#vivo-linhas tr[data-codigo="' + codigo + '"]');
+            if (tr) tr.scrollIntoView({ block: "nearest" });
+            atualizarBotoesMapa();
+          });
+        },
+      }).eachLayer((layer) => vivoGrupoRotas.addLayer(layer));
+      let limites = null;
+      try { limites = vivoGrupoRotas.getBounds(); } catch (e) { limites = null; }
+      if (limites && limites.isValid()) vivoMapa.fitBounds(limites.pad(0.08));
+      vivoDesenhoMs = Math.round(performance.now() - t0);
+      window.vivoCamadas = vivoCamadas;
+      const folha = $("vivo-folha");
+      if (folha) {
+        folha.dataset.pronto = "1";
+        folha.dataset.poligonos = String(Object.keys(vivoCamadas).length);
+        folha.dataset.desenhoMs = String(vivoDesenhoMs);
+      }
+    }
+
+    async function carregarGeometria(data, turno) {
+      const chave = data + "|" + turno;
+      const t0 = performance.now();
+      if (vivoGeoCache[chave]) {
+        desenharColecao(vivoGeoCache[chave], t0);
+        return;
+      }
+      const headers = {};
+      if (vivoEtags[chave]) headers["If-None-Match"] = vivoEtags[chave];
+      let resp = await fetch("/api/live-report/geometry?data=" + encodeURIComponent(data) + "&turno=" + encodeURIComponent(turno), { headers, cache: "no-cache" });
+      if (resp.status === 304) {
+        resp = await fetch("/api/live-report/geometry?data=" + encodeURIComponent(data) + "&turno=" + encodeURIComponent(turno), { cache: "reload" });
+      }
+      if (!resp.ok) return;
+      vivoEtag = resp.headers.get("ETag") || "";
+      vivoEtags[chave] = vivoEtag;
+      const colecao = await resp.json();
+      vivoGeoCache[chave] = colecao;
+      desenharColecao(colecao, t0);
+    }
+
+    async function carregarTrilhas(data, turno) {
+      const resp = await fetch("/api/live-report/tracks?data=" + encodeURIComponent(data) + "&turno=" + encodeURIComponent(turno), { cache: "no-store" });
+      if (!resp.ok) return;
+      const pacote = await resp.json();
+      vivoGrupoTrilha.clearLayers();
+      vivoTrilha = {};
+      vivoVistos = new Set();
+      (pacote.veiculos || []).forEach((veiculo) => {
+        (veiculo.linhas || []).forEach((linha) => {
+          if (!linha || linha.length < 2) return;
+          const poly = L.polyline(linha, { color: "#17324d", weight: 3, opacity: 0.85 });
+          poly.addTo(vivoGrupoTrilha);
+          vivoTrilha[veiculo.placa] = poly;
+        });
+      });
+      vivoCursor = pacote.cursor || "";
+      window.vivoTrilha = vivoTrilha;
+      const folha = $("vivo-folha");
+      if (folha) folha.dataset.cursor = vivoCursor;
+    }
+
+    async function atualizarTrilhas(data, turno) {
+      if (!vivoCursor) return;
+      const resp = await fetch("/api/live-report/track-updates?data=" + encodeURIComponent(data) + "&turno=" + encodeURIComponent(turno) + "&since=" + encodeURIComponent(vivoCursor), { cache: "no-store" });
+      if (!resp.ok) return;
+      const pacote = await resp.json();
+      (pacote.pontos || []).forEach(acrescentarPonto);
+      if (pacote.cursor) vivoCursor = pacote.cursor;
+    }
+
+    function limparDetalheRota() {
+      if (vivoGrupoFeitos) vivoGrupoFeitos.clearLayers();
+      if (vivoGrupoFalta) vivoGrupoFalta.clearLayers();
+      if (vivoGrupoEnt) vivoGrupoEnt.clearLayers();
+      if (vivoGrupoSai) vivoGrupoSai.clearLayers();
+    }
+
+    async function verSomenteRota(codigo) {
+      if (!codigo || !garantirMapaVivo()) return;
+      vivoFoco = codigo;
+      vivoCodigo = codigo;
+      atualizarEstiloRotas();
+      const rota = rotaVivo(codigo);
+      const placa = (rota && rota.placa) || "";
+      Object.entries(vivoTrilha).forEach(([id, linha]) => linha.setStyle({ opacity: id === placa ? 0.95 : 0.08 }));
+      const layer = vivoCamadas[codigo];
+      if (layer && layer.getBounds && layer.getBounds().isValid()) vivoMapa.fitBounds(layer.getBounds().pad(0.3));
+      limparDetalheRota();
+      const data = ($("data-vivo") && $("data-vivo").value) || "";
+      const turno = turnoVivo();
+      const resp = await fetch("/api/live-report/route-detail?data=" + encodeURIComponent(data) + "&turno=" + encodeURIComponent(turno) + "&rota=" + encodeURIComponent(codigo), { cache: "no-store" });
+      if (resp.ok) {
+        const det = await resp.json();
+        if (det.trechos_feitos) L.geoJSON(det.trechos_feitos, { style: { color: "#1b8a5a", weight: 5, opacity: 0.9 } }).eachLayer((l) => vivoGrupoFeitos.addLayer(l));
+        if (det.trechos_faltando) L.geoJSON(det.trechos_faltando, { style: { color: "#b34145", weight: 4, opacity: 0.85, dashArray: "6 4" } }).eachLayer((l) => vivoGrupoFalta.addLayer(l));
+        if (det.entrada) L.circleMarker([det.entrada.lat, det.entrada.lon], { radius: 8, color: "#1b8a5a", fillColor: "#1b8a5a", fillOpacity: 1 }).bindTooltip("Entrada " + (det.entrada.hora || "")).addTo(vivoGrupoEnt);
+        if (det.saida) L.circleMarker([det.saida.lat, det.saida.lon], { radius: 8, color: "#b34145", fillColor: "#b34145", fillOpacity: 1 }).bindTooltip("Saída " + (det.saida.hora || "")).addTo(vivoGrupoSai);
+        const folha = $("vivo-folha");
+        if (folha) {
+          folha.dataset.feitos = String((det.trechos_feitos && det.trechos_feitos.features || []).length);
+          folha.dataset.faltando = String((det.trechos_faltando && det.trechos_faltando.features || []).length);
+          folha.dataset.entrada = det.entrada ? "1" : "0";
+          folha.dataset.saida = det.saida ? "1" : "0";
+          folha.dataset.foco = codigo;
+        }
+      }
+      if (!vivoMapa.hasLayer(vivoGrupoFeitos)) vivoGrupoFeitos.addTo(vivoMapa);
+      if (!vivoMapa.hasLayer(vivoGrupoFalta)) vivoGrupoFalta.addTo(vivoMapa);
+      if (!vivoMapa.hasLayer(vivoGrupoEnt)) vivoGrupoEnt.addTo(vivoMapa);
+      if (!vivoMapa.hasLayer(vivoGrupoSai)) vivoGrupoSai.addTo(vivoMapa);
+      pintarTabelaVivo();
+      pintarDetalheVivo(rota);
+      atualizarBotoesMapa();
+    }
+
+    function mostrarTodasRotas() {
+      vivoFoco = "";
+      atualizarEstiloRotas();
+      Object.values(vivoTrilha).forEach((linha) => linha.setStyle({ opacity: 0.85 }));
+      limparDetalheRota();
+      if (vivoMapa && vivoMapa.hasLayer(vivoGrupoFeitos)) vivoMapa.removeLayer(vivoGrupoFeitos);
+      if (vivoMapa && vivoMapa.hasLayer(vivoGrupoFalta)) vivoMapa.removeLayer(vivoGrupoFalta);
+      if (vivoMapa && vivoMapa.hasLayer(vivoGrupoEnt)) vivoMapa.removeLayer(vivoGrupoEnt);
+      if (vivoMapa && vivoMapa.hasLayer(vivoGrupoSai)) vivoMapa.removeLayer(vivoGrupoSai);
+      let limites = null;
+      try { limites = vivoGrupoRotas && vivoGrupoRotas.getBounds(); } catch (e) { limites = null; }
+      if (vivoMapa && limites && limites.isValid()) vivoMapa.fitBounds(limites.pad(0.08));
+      const folha = $("vivo-folha");
+      if (folha) folha.dataset.foco = "";
+      atualizarBotoesMapa();
+    }
+
+    function atualizarBotoesMapa() {
+      const so = $("vivo-so");
+      const todas = $("vivo-todas");
+      if (so) so.hidden = !vivoCodigo;
+      if (todas) todas.hidden = !vivoFoco;
+    }
+
     function focarMapaVivo(codigo) {
-      const frame = $("vivo-mapa");
-      if (!frame || !frame.contentWindow || !codigo) return;
-      frame.contentWindow.postMessage({ tipo: "focar-rota", codigo }, "*");
+      if (!garantirMapaVivo() || !codigo) return;
+      const layer = vivoCamadas[codigo];
+      if (!layer) return;
+      const limites = layer.getBounds && layer.getBounds();
+      if (limites && limites.isValid()) vivoMapa.fitBounds(limites.pad(0.35));
+      layer.openPopup();
+      atualizarEstiloRotas();
+      atualizarBotoesMapa();
+    }
+
+    async function sincronizarMapaVivo(estado) {
+      if (!estado || !garantirMapaVivo()) return;
+      const data = estado.data || (($("data-vivo") && $("data-vivo").value) || "");
+      const turno = estado.turno || turnoVivo();
+      const chave = data + "|" + turno;
+      if (chave !== vivoChaveMapa) {
+        vivoChaveMapa = chave;
+        vivoCursor = "";
+        vivoFoco = "";
+        limparDetalheRota();
+        await carregarGeometria(data, turno);
+        await carregarTrilhas(data, turno);
+      } else {
+        atualizarEstiloRotas();
+        await atualizarTrilhas(data, turno);
+      }
+      desenharPosicoes();
+      atualizarBotoesMapa();
+      if (vivoMapa) vivoMapa.invalidateSize();
     }
 
     function aplicarEstadoVivo(estado) {
@@ -2730,17 +3065,7 @@
       pintarTabelaVivo();
       const atual = ((estado.rotas) || []).find((r) => r.codigo === vivoCodigo);
       pintarDetalheVivo(atual || null);
-      const url = estado.mapa_url ? urlApi(estado.mapa_url) : "";
-      const frame = $("vivo-mapa");
-      if (url && url !== vivoMapaUrl) {
-        vivoMapaUrl = url;
-        frame.src = url + (vivoCodigo ? "#" + encodeURIComponent(vivoCodigo) : "");
-      } else if (vivoCodigo) {
-        focarMapaVivo(vivoCodigo);
-      }
-      if (frame && frame.contentWindow && estado.posicoes && estado.posicoes.length) {
-        frame.contentWindow.postMessage({ tipo: "posicoes", lista: estado.posicoes }, "*");
-      }
+      sincronizarMapaVivo(estado).catch(() => {});
     }
 
     async function lerVivo(forcar) {
@@ -2772,7 +3097,7 @@
         if (!btn) return;
         turnoBox.querySelectorAll("button").forEach((el) => el.classList.toggle("ativo", el === btn));
         vivoCodigo = "";
-        vivoMapaUrl = "";
+        vivoFoco = "";
         lerVivo(false);
       });
     }
@@ -2780,7 +3105,7 @@
     if (dataVivo) {
       dataVivo.addEventListener("change", () => {
         vivoCodigo = "";
-        vivoMapaUrl = "";
+        vivoFoco = "";
         lerVivo(false);
       });
     }
@@ -2827,8 +3152,19 @@
         const rota = ((vivoEstado && vivoEstado.rotas) || []).find((r) => r.codigo === vivoCodigo);
         pintarDetalheVivo(rota || null);
         focarMapaVivo(vivoCodigo);
+        atualizarBotoesMapa();
       });
     }
+    const btnSo = $("vivo-so");
+    if (btnSo) btnSo.addEventListener("click", () => verSomenteRota(vivoCodigo));
+    const btnTodas = $("vivo-todas");
+    if (btnTodas) btnTodas.addEventListener("click", () => mostrarTodasRotas());
+    document.addEventListener("click", (ev) => {
+      const btn = ev.target.closest && ev.target.closest(".vivo-so-rota");
+      if (!btn) return;
+      ev.preventDefault();
+      verSomenteRota(btn.dataset.codigo || "");
+    });
     if (location.hash === "#vivo") mostrarAba("vivo");
   </script>
 </body>
