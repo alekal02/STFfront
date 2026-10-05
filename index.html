@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Sala técnica</title>
   <script src="config.js"></script>
   <style>
@@ -482,6 +482,7 @@
       text-decoration: none;
     }
     .rotas-bloco { display: grid; gap: 10px; margin-top: 14px; }
+    .rotas-resumo { margin: 0; font-size: 14px; font-weight: 700; color: var(--ink); }
     .rotas-filtros { display: flex; flex-wrap: wrap; gap: 6px; }
     .rotas-filtros button {
       background: #eef3f5;
@@ -496,11 +497,16 @@
       grid-template-columns: 76px 1fr;
       gap: 10px;
       align-items: center;
+      width: 100%;
+      text-align: left;
       padding: 12px 14px;
       border: 1px solid var(--line);
       border-left: 6px solid #c5d0d6;
       border-radius: 12px;
       background: #fff;
+      color: var(--text);
+      font-weight: 500;
+      cursor: pointer;
     }
     .rota-card .pct { font-size: 22px; font-weight: 800; letter-spacing: -.4px; line-height: 1; }
     .rota-card .estado { display: block; margin-top: 4px; font-size: 11px; font-weight: 700; letter-spacing: .2px; text-transform: uppercase; color: var(--muted); }
@@ -538,6 +544,25 @@
       iframe, #unificado-mapa, #mapa, #argos-mapa, #segtrack-mapa { height: 48vh; min-height: 260px; }
       #unificado-diario, #diario, #argos-diario, #segtrack-diario { min-height: 320px; }
       .menu-lista { left: 0; right: auto; }
+    }
+    @media (max-width: 520px) {
+      body { font-size: 16px; }
+      .shell { display: flex; flex-direction: column; }
+      .app { order: 1; }
+      .sidebar { order: 2; padding: 12px 12px calc(16px + env(safe-area-inset-bottom)); }
+      .topbar { padding: 12px 12px 10px; gap: 10px; }
+      .topbar .desc, #hint-ciclo-uni, .sidebar-rota > .rota-info { display: none; }
+      .topbar h1 { font-size: 22px; }
+      body[data-pagina="uni"] .barra-uni { grid-template-columns: 1fr; }
+      body[data-pagina="uni"] .barra-uni button.principal { font-size: 16px; padding: 14px 12px; }
+      main.painel { padding: 10px 12px calc(20px + env(safe-area-inset-bottom)); }
+      .rotas-filtros { position: sticky; top: 0; z-index: 4; background: var(--card); padding: 4px 0 8px; }
+      .rotas-filtros button { flex: 1 1 calc(50% - 6px); min-height: 44px; font-size: 15px; }
+      button.rota-card { grid-template-columns: 84px 1fr; min-height: 72px; padding: 14px; }
+      .rota-card .pct { font-size: 26px; }
+      .rota-card strong { font-size: 17px; line-height: 1.25; }
+      .rota-card small { font-size: 14px; }
+      iframe, #unificado-mapa { height: 62vh; min-height: 320px; }
     }
   </style>
 </head>
@@ -651,6 +676,7 @@
     <section class="card">
       <div class="status" id="status-uni"></div>
       <div class="rotas-bloco">
+        <p id="rotas-resumo" class="rotas-resumo"></p>
         <div class="rotas-filtros" id="rotas-filtros">
           <button type="button" data-filtro="feita" class="ativo">Preenchidas</button>
           <button type="button" data-filtro="parcial">Parciais</button>
@@ -1591,6 +1617,26 @@
       rotasDoDia = rotas || [];
       const box = $("rotas-painel");
       if (!box) return;
+      const contagem = { feita: 0, parcial: 0, apoio: 0, vazia: 0 };
+      rotasDoDia.forEach((r) => {
+        const cls = classeRota(r.status);
+        if (contagem[cls] != null) contagem[cls] += 1;
+      });
+      const filtros = $("rotas-filtros");
+      if (filtros) {
+        const nomes = { feita: "Preenchidas", parcial: "Parciais", apoio: "Apoio", vazia: "Sem coleta", todas: "Todas" };
+        filtros.querySelectorAll("button[data-filtro]").forEach((btn) => {
+          const chave = btn.dataset.filtro;
+          const n = chave === "todas" ? rotasDoDia.length : (contagem[chave] || 0);
+          btn.textContent = rotasDoDia.length ? `${nomes[chave]} ${n}` : nomes[chave];
+        });
+      }
+      const resumo = $("rotas-resumo");
+      if (resumo) {
+        resumo.textContent = rotasDoDia.length
+          ? `${contagem.feita} preenchida${contagem.feita === 1 ? "" : "s"} de ${rotasDoDia.length}`
+          : "";
+      }
       const visiveis = rotasDoDia.filter((r) => filtroRotas === "todas" || classeRota(r.status) === filtroRotas);
       if (!rotasDoDia.length) {
         box.innerHTML = '<p class="rotas-vazio">Gere o relatório diurno ou o noturno para ver as rotas preenchidas.</p>';
@@ -1604,8 +1650,24 @@
         const cls = classeRota(r.status);
         const nome = r.setor || r.codigo || "Rota";
         const extra = [r.placa && r.placa !== "—" ? r.placa : "", r.horario || ""].filter(Boolean).join(" · ");
-        return `<article class="rota-card ${cls}"><div><b class="pct">${r.percentual || "0%"}</b><span class="estado">${r.status || "—"}</span></div><div><strong>${nome}</strong><small>${extra || "Segtrack"}</small></div></article>`;
+        const codigo = String(r.codigo || "").replace(/"/g, "");
+        return `<button type="button" class="rota-card ${cls}" data-codigo="${codigo}"><div><b class="pct">${r.percentual || "0%"}</b><span class="estado">${r.status || "—"}</span></div><div><strong>${nome}</strong><small>${extra || "Segtrack"}</small></div></button>`;
       }).join("");
+    }
+
+    function abrirRotaLista(codigo) {
+      const sel = $("filtro-rota");
+      if (!sel || !codigo) return;
+      if (![...sel.options].some((o) => o.value === codigo)) {
+        const o = document.createElement("option");
+        o.value = codigo;
+        o.textContent = codigo;
+        sel.appendChild(o);
+      }
+      sel.value = codigo;
+      verRota(false);
+      const mapa = $("unificado-mapa");
+      if (mapa) mapa.scrollIntoView({ behavior: "smooth", block: "start" });
     }
 
     function pintarStatus(info) {
@@ -2331,6 +2393,14 @@
         filtroRotas = btn.dataset.filtro;
         filtros.querySelectorAll("button").forEach((el) => el.classList.toggle("ativo", el === btn));
         pintarRotas(rotasDoDia);
+      });
+    }
+    const painelRotas = $("rotas-painel");
+    if (painelRotas) {
+      painelRotas.addEventListener("click", (ev) => {
+        const card = ev.target.closest("button[data-codigo]");
+        if (!card || !card.dataset.codigo) return;
+        abrirRotaLista(card.dataset.codigo);
       });
     }
     carregarRotasDoDia();
