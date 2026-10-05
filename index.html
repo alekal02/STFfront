@@ -481,6 +481,9 @@
       border-radius: 8px;
       text-decoration: none;
     }
+    #status-uni, #aba-uni .rotas-bloco { display: none; }
+    #aba-uni.painel.ativo { display: flex; flex-direction: column; }
+    #aba-uni .visor { order: -1; }
     .rotas-bloco { display: grid; gap: 10px; margin-top: 14px; }
     .rotas-resumo { margin: 0; font-size: 14px; font-weight: 700; color: var(--ink); }
     .rotas-filtros { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -543,6 +546,7 @@
       .titulo-linha { align-items: stretch; }
       iframe, #unificado-mapa, #mapa, #argos-mapa, #segtrack-mapa { height: 48vh; min-height: 260px; }
       #unificado-diario, #diario, #argos-diario, #segtrack-diario { min-height: 320px; }
+      #unificado-mapa, #unificado-diario { height: calc(100dvh - 240px); min-height: 62vh; }
       .menu-lista { left: 0; right: auto; }
     }
     @media (max-width: 520px) {
@@ -562,10 +566,17 @@
       .rota-card .pct { font-size: 26px; }
       .rota-card strong { font-size: 17px; line-height: 1.25; }
       .rota-card small { font-size: 14px; }
-      #aba-uni.painel.ativo { display: flex; flex-direction: column; }
-      #aba-uni .visor { order: -1; }
-      #legenda-uni, #aba-uni .vista > .hint { display: none; }
-      iframe, #unificado-mapa { height: calc(100dvh - 132px); min-height: 68vh; }
+      body[data-pagina="uni"] .topbar .kicker,
+      body[data-pagina="uni"] .topbar h1,
+      #aba-uni > .card:not(.visor) .log-caixa,
+      #dias-uni,
+      #legenda-uni,
+      #aba-uni .vista > .hint { display: none; }
+      #aba-uni > .card:not(.visor) { order: -2; padding: 8px 10px; }
+      #aba-uni .andamento { margin-top: 0; }
+      #aba-uni .titulo-linha { margin-bottom: 0; }
+      iframe, #unificado-mapa { height: calc(100dvh - 196px); min-height: 72vh; }
+      #unificado-diario { height: calc(100dvh - 196px); min-height: 72vh; }
     }
   </style>
 </head>
