@@ -3333,15 +3333,21 @@
       return CORES_VIVO[(rota && rota.grupo) || "nao"] || CORES_VIVO.nao;
     }
 
-    function estiloRota(codigo, opacidade) {
-      const foco = !vivoFoco || vivoFoco === codigo;
-      return {
-        color: corRota(codigo),
-        weight: foco && vivoFoco === codigo ? 4 : 2,
-        fillColor: corRota(codigo),
-        fillOpacity: vivoFoco && vivoFoco !== codigo ? 0.05 : (opacidade == null ? 0.28 : opacidade),
-        opacity: vivoFoco && vivoFoco !== codigo ? 0.25 : 1,
-      };
+    function estiloRota(codigo) {
+      const cor = corRota(codigo);
+      const escolhida = codigo === (vivoFoco || vivoCodigo);
+      const isoladaFora = Boolean(vivoFoco) && vivoFoco !== codigo;
+      const suave = !vivoFoco && Boolean(vivoCodigo) && vivoCodigo !== codigo;
+      if (isoladaFora) {
+        return { color: cor, weight: 1, fillColor: cor, fillOpacity: 0.04, opacity: 0.18 };
+      }
+      if (escolhida) {
+        return { color: "#17324d", weight: 5, fillColor: cor, fillOpacity: 0.62, opacity: 1 };
+      }
+      if (suave) {
+        return { color: cor, weight: 1.5, fillColor: cor, fillOpacity: 0.1, opacity: 0.45 };
+      }
+      return { color: cor, weight: 2, fillColor: cor, fillOpacity: 0.28, opacity: 1 };
     }
 
     function htmlPopup(codigo) {
@@ -3385,11 +3391,23 @@
       return vivoMapa;
     }
 
+    function trazerPoligono(layer) {
+      if (!layer) return;
+      if (layer.bringToFront) layer.bringToFront();
+      if (layer.eachLayer) layer.eachLayer((filho) => filho.bringToFront && filho.bringToFront());
+    }
+
     function atualizarEstiloRotas() {
       Object.entries(vivoCamadas).forEach(([codigo, layer]) => {
         layer.setStyle(estiloRota(codigo));
         if (layer.getPopup()) layer.setPopupContent(htmlPopup(codigo));
       });
+      trazerPoligono(vivoCamadas[vivoFoco || vivoCodigo]);
+      const folha = $("vivo-folha");
+      if (folha) {
+        folha.dataset.selecionada = vivoCodigo || "";
+        folha.dataset.foco = vivoFoco || "";
+      }
     }
 
     function desenharPosicoes() {
@@ -3438,10 +3456,12 @@
         onEachFeature: (feat, layer) => {
           const codigo = (feat.properties && feat.properties.codigo) || feat.id;
           vivoCamadas[codigo] = layer;
-          layer.bindPopup(htmlPopup(codigo));
+          layer.bindPopup(htmlPopup(codigo), { autoPan: false });
           layer.on("click", () => {
+            if (vivoFoco && vivoFoco !== codigo) vivoFoco = "";
             vivoCodigo = codigo;
             pintarTabelaVivo();
+            atualizarEstiloRotas();
             if (!window.matchMedia("(max-width: 900px)").matches) {
               vivoFichaAberta = true;
               pintarDetalheVivo(rotaVivo(codigo));
@@ -3454,7 +3474,7 @@
       }).eachLayer((layer) => vivoGrupoRotas.addLayer(layer));
       let limites = null;
       try { limites = vivoGrupoRotas.getBounds(); } catch (e) { limites = null; }
-      if (limites && limites.isValid()) vivoMapa.fitBounds(limites.pad(0.08));
+      if (limites && limites.isValid()) vivoMapa.fitBounds(limites.pad(0.08), { animate: false });
       vivoDesenhoMs = Math.round(performance.now() - t0);
       window.vivoCamadas = vivoCamadas;
       const folha = $("vivo-folha");
@@ -3465,6 +3485,7 @@
         folha.dataset.poligonos = String(Object.keys(vivoCamadas).length);
         folha.dataset.desenhoMs = String(vivoDesenhoMs);
       }
+      if (vivoCodigo && vivoCamadas[vivoCodigo]) focarMapaVivo(vivoCodigo);
     }
 
     async function carregarGeometria(data, turno) {
@@ -3543,17 +3564,28 @@
       }
     }
 
-    async function verSomenteRota(codigo) {
+    function isolarGeometria(codigo) {
       if (!codigo || !garantirMapaVivo()) return;
       vivoFoco = codigo;
       vivoCodigo = codigo;
       atualizarEstiloRotas();
-      const rota = rotaVivo(codigo);
-      const placa = (rota && rota.placa) || "";
-      Object.entries(vivoTrilha).forEach(([id, linha]) => linha.setStyle({ opacity: id === placa ? 0.95 : 0.08 }));
+      const placa = (rotaVivo(codigo) && rotaVivo(codigo).placa) || "";
+      Object.entries(vivoTrilha).forEach(([id, linha]) => linha.setStyle({ opacity: placa && id === placa ? 0.95 : 0.08 }));
       const layer = vivoCamadas[codigo];
-      if (layer && layer.getBounds && layer.getBounds().isValid()) vivoMapa.fitBounds(layer.getBounds().pad(0.3));
+      if (layer && layer.getBounds && layer.getBounds().isValid()) vivoMapa.fitBounds(layer.getBounds().pad(0.3), { animate: false });
       limparDetalheRota();
+      if (vivoMapa.hasLayer(vivoGrupoFeitos)) vivoMapa.removeLayer(vivoGrupoFeitos);
+      if (vivoMapa.hasLayer(vivoGrupoFalta)) vivoMapa.removeLayer(vivoGrupoFalta);
+      if (vivoMapa.hasLayer(vivoGrupoEnt)) vivoMapa.removeLayer(vivoGrupoEnt);
+      if (vivoMapa.hasLayer(vivoGrupoSai)) vivoMapa.removeLayer(vivoGrupoSai);
+      pintarTabelaVivo();
+      atualizarBotoesMapa();
+    }
+
+    async function verSomenteRota(codigo) {
+      if (!codigo || !garantirMapaVivo()) return;
+      isolarGeometria(codigo);
+      const rota = rotaVivo(codigo);
       const data = ($("data-vivo") && $("data-vivo").value) || "";
       const turno = turnoVivo();
       const chave = data + "|" + turno + "|" + codigo;
@@ -3587,7 +3619,7 @@
       if (vivoMapa && vivoMapa.hasLayer(vivoGrupoSai)) vivoMapa.removeLayer(vivoGrupoSai);
       let limites = null;
       try { limites = vivoGrupoRotas && vivoGrupoRotas.getBounds(); } catch (e) { limites = null; }
-      if (vivoMapa && limites && limites.isValid()) vivoMapa.fitBounds(limites.pad(0.08));
+      if (vivoMapa && limites && limites.isValid()) vivoMapa.fitBounds(limites.pad(0.08), { animate: false });
       const folha = $("vivo-folha");
       if (folha) folha.dataset.foco = "";
       atualizarBotoesMapa();
@@ -3604,10 +3636,18 @@
       if (!garantirMapaVivo() || !codigo) return;
       const layer = vivoCamadas[codigo];
       if (!layer) return;
-      const limites = layer.getBounds && layer.getBounds();
-      if (limites && limites.isValid()) vivoMapa.fitBounds(limites.pad(0.35));
-      layer.openPopup();
+      if (vivoFoco && vivoFoco !== codigo) vivoFoco = "";
       atualizarEstiloRotas();
+      const limites = layer.getBounds && layer.getBounds();
+      const estreito = window.matchMedia("(max-width: 900px)").matches;
+      if (estreito) vivoMapa.closePopup();
+      else if (layer.getPopup() && limites && limites.isValid()) layer.openPopup([limites.getNorth(), limites.getCenter().lng]);
+      if (limites && limites.isValid()) {
+        vivoMapa.stop();
+        const altura = ($("vivo-folha") && $("vivo-folha").clientHeight) || 420;
+        const topo = estreito ? 24 : Math.min(150, Math.round(altura * 0.32));
+        vivoMapa.fitBounds(limites, { paddingTopLeft: [20, topo], paddingBottomRight: [20, 24], maxZoom: 16, animate: false });
+      }
       atualizarBotoesMapa();
     }
 
@@ -3819,7 +3859,7 @@
       });
     }
     const btnSo = $("vivo-so");
-    if (btnSo) btnSo.addEventListener("click", () => verSomenteRota(vivoCodigo));
+    if (btnSo) btnSo.addEventListener("click", () => isolarGeometria(vivoCodigo));
     const btnTodas = $("vivo-todas");
     if (btnTodas) btnTodas.addEventListener("click", () => mostrarTodasRotas());
     function irParaMapa(codigo) {
