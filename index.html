@@ -586,6 +586,11 @@
       #unificado-diario { height: calc(100dvh - 196px); min-height: 72vh; }
     }
     .vivo-aviso { margin: 0; font-size: 14px; font-weight: 700; }
+    .vivo-fase { display: inline-block; margin: 0 0 8px; padding: 4px 10px; border-radius: 999px; font-size: 13px; font-weight: 800; }
+    .vivo-fase.aberto { background: #e5f6ee; color: #146b45; }
+    .vivo-fase.finalizando { background: #fff4d6; color: #8a6b12; }
+    .vivo-fase.encerrado { background: #eceff1; color: #1c2428; }
+    #btn-vivo-agora:disabled, #btn-vivo-pausa:disabled, #btn-vivo-encerrar:disabled { opacity: .45; cursor: not-allowed; }
     .vivo-aviso.ok { color: #1b8a5a; }
     .vivo-aviso.run { color: #8a6b12; }
     .vivo-aviso.err { color: #b34145; }
@@ -712,6 +717,8 @@
             </div>
             <button type="button" class="principal" id="btn-vivo-agora">Atualizar agora</button>
             <button type="button" class="sec" id="btn-vivo-pausa">Pausar atualização</button>
+            <button type="button" class="sec" id="btn-vivo-encerrar" hidden>Encerrar turno</button>
+            <button type="button" class="sec" id="btn-vivo-reabrir" hidden>Reabrir turno</button>
           </div>
           <div class="topbar-acoes barra-inlog" hidden>
             <input class="campo" id="veiculos" placeholder="Frota (CCL)" value="CCL" title="Filtro da frota Inlog" />
@@ -799,6 +806,7 @@
 
   <main id="aba-vivo" class="painel">
     <section class="card">
+      <p id="vivo-fase" class="vivo-fase" hidden></p>
       <p id="vivo-aviso" class="vivo-aviso">Carregando o último estado salvo...</p>
       <div class="vivo-cards" id="vivo-cards"></div>
       <div class="vivo-apoio" id="vivo-apoio" hidden><span>Veículos de apoio</span><strong id="vivo-apoio-n">0</strong></div>
@@ -2607,6 +2615,11 @@
         el.textContent = "Falha na atualização — exibindo dados de " + vivoEstado.atualizado_hora;
         return;
       }
+      if (estado && estado.situacao === "ENCERRADO") {
+        el.classList.add("ok");
+        el.textContent = "Turno encerrado — dados históricos";
+        return;
+      }
       if (estado && estado.atualizando) {
         el.classList.add("run");
         el.textContent = estado.aviso || "Atualização em andamento...";
@@ -2628,6 +2641,56 @@
       const seguinte = vivoPausado ? "pausada" : proximaLeitura();
       const tele = rotuloTelemetria(estado && estado.telemetria);
       el.textContent = "Última atualização: " + hora + " · Próxima leitura: " + seguinte + " · " + ((estado && estado.periodo) || "") + (tele ? " · " + tele : "");
+    }
+
+    function turnoEncerrado(estado) {
+      return !!(estado && estado.situacao === "ENCERRADO");
+    }
+
+    function rotuloTurnoVivo() {
+      const data = ($("data-vivo") && $("data-vivo").value) || "";
+      const partes = data.split("-");
+      if (partes.length !== 3) return "";
+      const nome = turnoVivo() === "noturno" ? "NOTURNO" : "DIURNO";
+      return partes[2] + "/" + partes[1] + "/" + partes[0] + " " + nome;
+    }
+
+    function pintarFaseVivo(estado) {
+      const el = $("vivo-fase");
+      if (!el) return;
+      const sit = (estado && estado.situacao) || "";
+      el.hidden = !sit;
+      el.className = "vivo-fase";
+      if (sit === "FINALIZANDO") {
+        el.classList.add("finalizando");
+        el.textContent = "🟡 Finalizando";
+      } else if (sit === "ENCERRADO") {
+        el.classList.add("encerrado");
+        el.textContent = "⚫ Encerrado";
+      } else if (sit === "ABERTO") {
+        el.classList.add("aberto");
+        el.textContent = "🟢 Ao vivo";
+      }
+      const agoraBtn = $("btn-vivo-agora");
+      const pausaBtn = $("btn-vivo-pausa");
+      const encerrarBtn = $("btn-vivo-encerrar");
+      const reabrirBtn = $("btn-vivo-reabrir");
+      const historico = sit === "ENCERRADO";
+      if (agoraBtn) agoraBtn.disabled = historico;
+      if (pausaBtn) pausaBtn.disabled = historico;
+      if (encerrarBtn) encerrarBtn.hidden = !(sit === "ABERTO" || sit === "FINALIZANDO");
+      if (reabrirBtn) reabrirBtn.hidden = !historico;
+    }
+
+    function acompanharVivo(estado) {
+      pintarFaseVivo(estado);
+      if (turnoEncerrado(estado)) {
+        pararRelogioVivo();
+        return;
+      }
+      if (!vivoPausado && !vivoTimer && aba === "vivo") {
+        vivoTimer = setInterval(() => lerVivo(false), VIVO_LEITURA_MS);
+      }
     }
 
     function rotuloTelemetria(valor) {
@@ -3044,9 +3107,11 @@
         limparDetalheRota();
         await carregarGeometria(data, turno);
         await carregarTrilhas(data, turno);
-      } else {
+      } else if (!turnoEncerrado(estado)) {
         atualizarEstiloRotas();
         await atualizarTrilhas(data, turno);
+      } else {
+        atualizarEstiloRotas();
       }
       desenharPosicoes();
       atualizarBotoesMapa();
@@ -3060,6 +3125,7 @@
         return;
       }
       vivoEstado = estado;
+      acompanharVivo(estado);
       pintarAvisoVivo(estado, false);
       pintarCardsVivo(estado.resumo);
       pintarTabelaVivo();
@@ -3069,6 +3135,7 @@
     }
 
     async function lerVivo(forcar) {
+      if (forcar && turnoEncerrado(vivoEstado)) return;
       const data = ($("data-vivo") && $("data-vivo").value) || "";
       const turno = turnoVivo();
       try {
@@ -3111,6 +3178,35 @@
     }
     const btnAgora = $("btn-vivo-agora");
     if (btnAgora) btnAgora.addEventListener("click", () => lerVivo(true));
+    async function pedirTurno(acao) {
+      const esperado = rotuloTurnoVivo();
+      if (!esperado) return;
+      const digitado = window.prompt("Para confirmar, digite exatamente: " + esperado);
+      if (digitado === null) return;
+      if (digitado.trim().toUpperCase() !== esperado) {
+        window.alert("A confirmação precisa ser " + esperado + ". Nada foi enviado.");
+        return;
+      }
+      const resp = await fetch("/api/live-report/" + acao, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          data: ($("data-vivo") && $("data-vivo").value) || "",
+          turno: turnoVivo(),
+          confirmacao: digitado.trim(),
+        }),
+      });
+      const estado = await resp.json();
+      if (!resp.ok) {
+        window.alert(estado.erro || "Não foi possível concluir.");
+        return;
+      }
+      aplicarEstadoVivo(estado);
+    }
+    const btnEncerrar = $("btn-vivo-encerrar");
+    if (btnEncerrar) btnEncerrar.addEventListener("click", () => pedirTurno("encerrar"));
+    const btnReabrir = $("btn-vivo-reabrir");
+    if (btnReabrir) btnReabrir.addEventListener("click", () => pedirTurno("reabrir"));
     const btnPausa = $("btn-vivo-pausa");
     if (btnPausa) {
       btnPausa.addEventListener("click", () => {
