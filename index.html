@@ -607,7 +607,7 @@
     .vivo-apoio { margin-top: 8px; display: flex; justify-content: space-between; align-items: center; }
     .vivo-apoio strong { margin: 0; font-size: 22px; color: #5b4b8a; }
     .vivo-corpo { display: grid; grid-template-columns: 1.3fr .9fr; gap: 12px; min-height: 0; }
-    .vivo-folha { width: 100%; height: min(68vh, 720px); min-height: 420px; border: 1px solid var(--line); border-radius: 10px; background: #e7eef2; }
+    .vivo-folha { position: relative; z-index: 0; isolation: isolate; width: 100%; height: min(68vh, 720px); min-height: 420px; border: 1px solid var(--line); border-radius: 10px; background: #e7eef2; }
     .vivo-mapa-acoes { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
     .vivo-mapa-acoes button, .vivo-popup button { background: var(--teal); color: #fff; border: 0; border-radius: 8px; padding: 6px 10px; font-weight: 700; cursor: pointer; }
     .vivo-popup { font-size: 13px; line-height: 1.45; min-width: 180px; }
@@ -634,8 +634,343 @@
     .vivo-detalhe { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--line); display: grid; gap: 4px; font-size: 13px; }
     .vivo-vazio { color: var(--muted); margin: 8px 0; }
     @media (max-width: 980px) {
-      .vivo-cards { grid-template-columns: repeat(3, 1fr); }
+      .vivo-cards { display: flex; flex-direction: column; }
       .vivo-corpo { grid-template-columns: 1fr; }
+    }
+    .sr {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+    button:focus-visible, a:focus-visible, .campo:focus-visible, select:focus-visible, summary:focus-visible {
+      outline: 3px solid #0f7a80;
+      outline-offset: 2px;
+    }
+    .vivo-marca { display: none; }
+    .vivo-cards { display: flex; flex-direction: column; gap: 8px; }
+    .vivo-hero {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      padding: 12px 14px;
+    }
+    .vivo-hero strong { margin: 0; font-size: 42px; line-height: 1; }
+    .vivo-hero span { margin: 0; font-size: 13px; }
+    .vivo-grade { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
+    .vivo-grade .vivo-card { padding: 8px 10px; }
+    .vivo-grade .vivo-card strong { font-size: 22px; }
+    .vivo-esqueleto .sk {
+      height: 58px;
+      border-radius: 12px;
+      background: linear-gradient(90deg, #e7eef2 25%, #f7fafb 50%, #e7eef2 75%);
+      background-size: 200% 100%;
+      animation: vivo-pulso 1.2s ease-in-out infinite;
+    }
+    .vivo-esqueleto .sk-hero { height: 72px; }
+    @keyframes vivo-pulso { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
+    .vivo-alterna, .vivo-filtro-movel, .vivo-lista, .rotulo-curto { display: none; }
+    .vivo-admin { margin-left: 8px; }
+    .vivo-admin summary {
+      cursor: pointer;
+      list-style: none;
+      min-height: 40px;
+      display: inline-flex;
+      align-items: center;
+      padding: 0 12px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fff;
+      font-weight: 700;
+    }
+    .vivo-admin summary::-webkit-details-marker { display: none; }
+    .vivo-admin-botoes { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 8px; }
+    .vivo-admin-botoes .perigo { border-color: #b34145; color: #8d2d31; }
+    .vivo-lista { gap: 8px; }
+    .rota-movel {
+      display: grid;
+      gap: 4px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fff;
+    }
+    .rota-movel.sel { box-shadow: inset 0 0 0 2px var(--teal); }
+    .rota-movel-topo { display: flex; justify-content: space-between; align-items: center; gap: 8px; width: 100%; }
+    .rota-linha { display: block; color: var(--muted); font-size: 14px; line-height: 1.35; }
+    .rota-abrir {
+      display: grid;
+      gap: 4px;
+      width: 100%;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: inherit;
+      text-align: left;
+      font: inherit;
+      cursor: pointer;
+    }
+    .rota-abrir strong { font-size: 18px; }
+    .rota-movel .barra-pct { height: 10px; }
+    .rota-movel p { margin: 0; color: var(--muted); font-size: 14px; }
+    .rota-movel .st-concluida, .rota-movel .st-parcial, .rota-movel .st-inicio,
+    .rota-movel .st-nao, .rota-movel .st-apoio, .rota-movel .st-passagem { font-size: 13px; letter-spacing: .2px; }
+    .vivo-ir-mapa, .vivo-ficha-acoes button, .vivo-fechar-ficha {
+      min-height: 44px;
+      border-radius: 10px;
+      font-weight: 700;
+    }
+    .vivo-ir-mapa { justify-self: start; background: #eef3f5; color: var(--navy); }
+    .vivo-espera { margin: 8px 0 0; color: var(--muted); font-size: 13px; }
+    .vivo-cortina {
+      position: fixed;
+      inset: 0;
+      background: rgba(16, 32, 40, .35);
+      z-index: 60;
+    }
+    .vivo-detalhe { position: relative; }
+    #vivo-apoio { display: none !important; }
+    .nav-app, .painel-mais { display: none; }
+    :root { --nav-h: calc(56px + env(safe-area-inset-bottom)); }
+    @keyframes vivo-gira { to { transform: rotate(360deg); } }
+    #btn-vivo-agora .vivo-giro { display: inline-block; }
+    #btn-vivo-agora.ocupado .vivo-giro { animation: vivo-gira .8s linear infinite; }
+    #btn-vivo-agora.ocupado { cursor: progress; }
+    .vivo-legenda-caixa summary { cursor: pointer; font-weight: 800; }
+    @media (min-width: 901px) {
+      .vivo-legenda-caixa summary { display: none; }
+      .vivo-legenda-caixa .vivo-legenda { display: flex !important; }
+    }
+    @media (max-width: 900px) {
+      html, body { overflow-x: hidden; max-width: 100%; }
+      body { padding-bottom: var(--nav-h); }
+      body[data-pagina="vivo"] .sidebar { display: none; }
+      body[data-pagina="vivo"] .topbar .kicker,
+      body[data-pagina="vivo"] .topbar h1,
+      body[data-pagina="vivo"] .topbar .desc { display: none; }
+      body[data-pagina="vivo"] {
+        height: 100dvh;
+        overflow: hidden;
+        padding-bottom: 0;
+      }
+      body[data-pagina="vivo"] .shell {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        min-height: 0;
+      }
+      body[data-pagina="vivo"] .app {
+        flex: 1;
+        min-height: 0;
+        overflow: hidden;
+      }
+      body[data-pagina="vivo"] .topbar {
+        flex: none;
+        padding: calc(6px + env(safe-area-inset-top)) 12px 6px;
+        gap: 8px;
+      }
+      body[data-pagina="vivo"] #aba-vivo.ativo {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        min-height: 0;
+        overflow: hidden;
+        padding: 8px 10px var(--nav-h);
+        gap: 8px;
+      }
+      body[data-pagina="vivo"] #aba-vivo > section.card:first-of-type {
+        flex: none;
+        padding: 8px 10px;
+      }
+      body[data-pagina="vivo"] #aba-vivo > section.card:last-of-type {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        padding: 8px;
+      }
+      body[data-pagina="vivo"].vivo-rotas #aba-vivo > section.card:last-of-type { overflow: auto; }
+      .vivo-cabeca { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+      .vivo-marca { display: block; margin: 0; line-height: 1.2; }
+      .vivo-marca strong { font-size: 14px; }
+      .vivo-marca span { color: var(--muted); font-size: 12px; margin-left: 6px; }
+      .vivo-fase { margin: 0; }
+      .vivo-aviso { margin-top: 4px; font-size: 13px; font-weight: 650; white-space: pre-line; }
+      body[data-pagina="vivo"] .barra-vivo { width: 100%; display: grid; gap: 8px; justify-content: stretch; }
+      #vivo-apoio { display: none !important; }
+      .vivo-controles {
+        display: grid;
+        grid-template-columns: minmax(0, 1.15fr) minmax(0, 1.25fr) 44px;
+        gap: 8px;
+        width: 100%;
+      }
+      .vivo-controles .campo { min-width: 0; width: 100%; min-height: 44px; }
+      #turno-vivo { display: grid; grid-template-columns: 1fr 1fr; min-width: 0; }
+      #turno-vivo button { min-height: 44px; padding: 8px 4px; font-size: 13px; }
+      #btn-vivo-agora { width: 44px; min-width: 44px; height: 44px; padding: 0; font-size: 22px; }
+      .rotulo-largo { display: none; }
+      .rotulo-curto { display: inline; }
+      .vivo-admin { display: none; }
+      .vivo-hero { padding: 4px 8px; }
+      .vivo-hero strong { font-size: 28px; }
+      .vivo-grade { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+      .vivo-grade .vivo-card { min-width: 0; padding: 6px; }
+      .vivo-grade .vivo-card span { font-size: 10px; line-height: 1.2; overflow-wrap: anywhere; }
+      .vivo-grade .vivo-card strong { font-size: 16px; margin-top: 0; }
+      .vivo-alterna {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-bottom: 10px;
+      }
+      .vivo-alterna button {
+        min-height: 44px;
+        border-radius: 10px;
+        background: #eef3f5;
+        color: var(--navy);
+        font-weight: 800;
+      }
+      .vivo-alterna button[aria-selected="true"] { background: var(--teal); color: #fff; }
+      .vivo-filtro-movel { display: grid; gap: 4px; margin-bottom: 8px; font-size: 12px; font-weight: 700; color: var(--muted); }
+      .vivo-filtro-movel select { min-height: 44px; width: 100%; font-size: 16px; }
+      .vivo-filtros, .vivo-tabela-caixa { display: none; }
+      .vivo-lista { display: grid; }
+      body.vivo-rotas .vivo-mapa { display: none; }
+      body:not(.vivo-rotas) .vivo-lista,
+      body:not(.vivo-rotas) .vivo-filtro-movel,
+      body:not(.vivo-rotas) #vivo-vazio { display: none; }
+      body[data-pagina="vivo"]:not(.vivo-rotas) .vivo-corpo,
+      body[data-pagina="vivo"]:not(.vivo-rotas) .vivo-mapa {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+      }
+      .vivo-legenda-caixa { flex: none; margin: 0 0 6px; }
+      .vivo-legenda-caixa summary {
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        list-style: none;
+      }
+      .vivo-legenda-caixa summary::-webkit-details-marker { display: none; }
+      .vivo-legenda { flex-wrap: wrap; gap: 6px 10px; font-size: 12px; margin: 0 0 6px; }
+      .vivo-legenda span { white-space: nowrap; }
+      .vivo-folha { flex: 1; width: 100%; height: auto; min-height: 160px; }
+      .vivo-mapa-acoes { flex: none; }
+      .vivo-mapa-acoes:not(:has(button:not([hidden]))) { display: none; }
+      .rota-movel { gap: 2px; padding: 8px 10px; }
+      .rota-movel .vivo-ir-mapa { width: 100%; }
+      .rota-status { text-transform: uppercase; letter-spacing: .4px; font-size: 12px; }
+      .vivo-mapa-acoes button { min-height: 44px; padding: 10px 14px; }
+      .leaflet-control-zoom a { width: 36px; height: 36px; line-height: 36px; font-size: 18px; }
+      .leaflet-popup-content { margin: 10px 12px; }
+      .vivo-popup { min-width: 0; max-width: 220px; font-size: 15px; }
+      .vivo-popup button { min-height: 44px; width: 100%; margin-top: 6px; }
+      #vivo-detalhe:not([hidden]) {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: var(--nav-h);
+        z-index: 70;
+        max-height: min(48dvh, 420px);
+        overflow: auto;
+        margin: 0;
+        padding: 8px 16px 14px;
+        border: 0;
+        border-radius: 16px 16px 0 0;
+        background: #fff;
+        box-shadow: 0 -8px 28px rgba(16, 32, 40, .18);
+      }
+      .vivo-alca {
+        display: block;
+        width: 42px;
+        height: 4px;
+        margin: 2px auto 8px;
+        border-radius: 4px;
+        background: #c5d0d6;
+      }
+      .vivo-ficha-acoes { display: grid; gap: 8px; margin-top: 12px; }
+      .vivo-ficha-acoes button { width: 100%; }
+      .vivo-fechar-ficha { width: auto; min-height: 44px; margin: 0; background: #eef3f5; color: var(--navy); flex: none; }
+      .nav-app {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 80;
+        background: #fff;
+        border-top: 1px solid var(--line);
+        padding-bottom: env(safe-area-inset-bottom);
+      }
+      .nav-app button {
+        min-height: 56px;
+        border: 0;
+        border-radius: 0;
+        background: #fff;
+        color: var(--muted);
+        font-weight: 800;
+        font-size: 13px;
+      }
+      .nav-app button.ativo { color: var(--teal); box-shadow: inset 0 3px 0 var(--teal); }
+      .painel-mais {
+        display: none;
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: var(--nav-h);
+        z-index: 75;
+        max-height: min(72vh, 560px);
+        overflow: auto;
+        padding: 16px 16px 20px;
+        background: #fff;
+        border-radius: 16px 16px 0 0;
+        box-shadow: 0 -8px 28px rgba(16, 32, 40, .18);
+      }
+      body.mais-aberto .painel-mais { display: grid; gap: 8px; }
+      .painel-mais h2 { margin: 8px 0 0; font-size: 14px; }
+      .painel-mais button { min-height: 48px; text-align: left; padding: 10px 12px; }
+      .painel-mais .perigo { margin-top: 8px; border-color: #b34145; color: #8d2d31; background: #fff; }
+      .mais-nota { margin: 0; color: var(--muted); font-size: 13px; }
+      .mais-separa { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+    }
+    @media (max-width: 900px) and (max-height: 520px) {
+      .vivo-marca, .vivo-aviso, .vivo-cards { display: none; }
+      body[data-pagina="vivo"] .topbar { padding: 4px 8px; }
+      .vivo-controles .campo, #turno-vivo button, #btn-vivo-agora { min-height: 36px; height: 36px; }
+      body[data-pagina="vivo"] #aba-vivo.ativo { gap: 4px; padding: 4px 8px var(--nav-h); }
+      body[data-pagina="vivo"] #aba-vivo > section.card:first-of-type,
+      body[data-pagina="vivo"] #aba-vivo > section.card:last-of-type { padding: 4px 8px; }
+      .vivo-hero { padding: 0; }
+      .vivo-hero strong { font-size: 22px; }
+      .vivo-alterna { margin: 0 0 4px; }
+      .vivo-alterna button { min-height: 36px; }
+      .vivo-mapa { position: relative; }
+      .vivo-legenda-caixa {
+        position: absolute;
+        left: 8px;
+        bottom: 8px;
+        z-index: 500;
+        margin: 0;
+        background: rgba(255, 255, 255, .94);
+        border-radius: 8px;
+      }
+      .vivo-legenda-caixa summary { min-height: 32px; padding: 0 8px; }
+      .vivo-folha { min-height: 0; }
+      #vivo-detalhe:not([hidden]) { max-height: min(58dvh, 220px); }
+    }
+    @media (min-width: 901px) {
+      .vivo-alca { display: none; }
+      .vivo-ficha-acoes { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+      .vivo-fechar-ficha { margin-top: 8px; }
     }
   </style>
 </head>
@@ -710,15 +1045,23 @@
             <button type="button" class="parar" onclick="pararGeracao('log-uni')">Parar</button>
           </div>
           <div class="topbar-acoes barra-vivo">
-            <input class="campo" id="data-vivo" type="date" title="Data operacional" />
-            <div class="vistas" id="turno-vivo">
-              <button type="button" class="ativo" data-turno="diurno">Diurno</button>
-              <button type="button" data-turno="noturno">Noturno</button>
+            <div class="vivo-controles">
+              <label class="sr" for="data-vivo">Data operacional</label>
+              <input class="campo" id="data-vivo" type="date" title="Data operacional" />
+              <div class="vistas" id="turno-vivo" role="group" aria-label="Turno">
+                <button type="button" class="ativo" data-turno="diurno">Diurno</button>
+                <button type="button" data-turno="noturno">Noturno</button>
+              </div>
+              <button type="button" class="principal" id="btn-vivo-agora" aria-label="Atualizar agora" title="Atualizar agora"><span class="vivo-giro" aria-hidden="true">↻</span><span class="rotulo-largo">Atualizar agora</span></button>
             </div>
-            <button type="button" class="principal" id="btn-vivo-agora">Atualizar agora</button>
-            <button type="button" class="sec" id="btn-vivo-pausa">Pausar atualização</button>
-            <button type="button" class="sec" id="btn-vivo-encerrar" hidden>Encerrar turno</button>
-            <button type="button" class="sec" id="btn-vivo-reabrir" hidden>Reabrir turno</button>
+            <details class="vivo-admin" id="vivo-admin">
+              <summary>Mais ações</summary>
+              <div class="vivo-admin-botoes">
+                <button type="button" class="sec" id="btn-vivo-pausa" title="Pausa só a atualização desta tela. A sincronização do servidor continua.">Pausar tela</button>
+                <button type="button" class="sec perigo" id="btn-vivo-encerrar" hidden>Encerrar turno</button>
+                <button type="button" class="sec" id="btn-vivo-reabrir" hidden>Reabrir turno</button>
+              </div>
+            </details>
           </div>
           <div class="topbar-acoes barra-inlog" hidden>
             <input class="campo" id="veiculos" placeholder="Frota (CCL)" value="CCL" title="Filtro da frota Inlog" />
@@ -806,39 +1149,65 @@
 
   <main id="aba-vivo" class="painel">
     <section class="card">
-      <p id="vivo-fase" class="vivo-fase" hidden></p>
-      <p id="vivo-aviso" class="vivo-aviso">Carregando o último estado salvo...</p>
-      <div class="vivo-cards" id="vivo-cards"></div>
+      <div class="vivo-cabeca">
+        <p class="vivo-marca"><strong>SAGTrack</strong><span>Conclusão de Rotas</span></p>
+        <p id="vivo-fase" class="vivo-fase" hidden></p>
+      </div>
+      <p id="vivo-aviso" class="vivo-aviso" role="status">Carregando o último estado salvo...</p>
+      <div class="vivo-cards vivo-esqueleto" id="vivo-cards" aria-busy="true">
+        <div class="sk sk-hero"></div>
+        <div class="vivo-grade"><div class="sk"></div><div class="sk"></div><div class="sk"></div><div class="sk"></div><div class="sk"></div><div class="sk"></div></div>
+      </div>
       <div class="vivo-apoio" id="vivo-apoio" hidden><span>Veículos de apoio</span><strong id="vivo-apoio-n">0</strong></div>
     </section>
     <section class="card">
+      <div class="vivo-alterna" role="tablist" aria-label="Mapa ou rotas">
+        <button type="button" id="vivo-ver-mapa" role="tab" aria-selected="true">Mapa</button>
+        <button type="button" id="vivo-ver-rotas" role="tab" aria-selected="false">Rotas</button>
+      </div>
       <div class="vivo-corpo">
         <div class="vivo-mapa">
-          <div id="vivo-folha" class="vivo-folha"></div>
+          <div id="vivo-folha" class="vivo-folha" role="application" aria-label="Mapa das rotas"></div>
+          <p id="vivo-mapa-espera" class="vivo-espera">Carregando o mapa...</p>
           <div class="vivo-mapa-acoes">
             <button type="button" id="vivo-so" hidden>Ver somente esta rota</button>
             <button type="button" id="vivo-todas" hidden>Mostrar todas</button>
           </div>
-          <p class="vivo-legenda">
-            <span><i style="background:#1b8a5a"></i>Concluída</span>
-            <span><i style="background:#c56a1a"></i>Parcial</span>
-            <span><i style="background:#1d6a8a"></i>Início de coleta</span>
-            <span><i style="background:#b7c3c9"></i>Não iniciada</span>
-            <span><i style="background:#8a3d3d"></i>Só passagem</span>
-            <span><i style="background:#5b4b8a"></i>Apoio</span>
-          </p>
+          <details class="vivo-legenda-caixa">
+            <summary>Legenda</summary>
+            <p class="vivo-legenda">
+              <span><i style="background:#1b8a5a"></i>Concluída</span>
+              <span><i style="background:#c56a1a"></i>Parcial</span>
+              <span><i style="background:#1d6a8a"></i>Início</span>
+              <span><i style="background:#b7c3c9"></i>Não iniciada</span>
+              <span><i style="background:#8a3d3d"></i>Só passagem</span>
+              <span><i style="background:#5b4b8a"></i>Apoio</span>
+            </p>
+          </details>
         </div>
-        <div>
-          <div class="vivo-filtros" id="vivo-filtros">
+        <div class="vivo-rotas">
+          <label class="vivo-filtro-movel" for="vivo-filtro-movel">Filtrar
+            <select id="vivo-filtro-movel" aria-label="Filtrar rotas">
+              <option value="todas">Todas</option>
+              <option value="concluida">Concluídas</option>
+              <option value="parcial">Parciais</option>
+              <option value="inicio">Início</option>
+              <option value="nao">Não iniciadas</option>
+              <option value="passagem">Só passagem</option>
+              <option value="apoio">Apoio</option>
+            </select>
+          </label>
+          <div class="vivo-filtros" id="vivo-filtros" role="group" aria-label="Filtrar rotas">
             <button type="button" class="ativo" data-grupo="todas">Todas</button>
             <button type="button" data-grupo="concluida">Concluídas</button>
             <button type="button" data-grupo="parcial">Parciais</button>
-            <button type="button" data-grupo="inicio">Início de coleta</button>
+            <button type="button" data-grupo="inicio">Início</button>
             <button type="button" data-grupo="nao">Não iniciadas</button>
             <button type="button" data-grupo="passagem">Só passagem</button>
             <button type="button" data-grupo="apoio">Apoio</button>
           </div>
-          <div style="overflow:auto; max-height:68vh">
+          <div id="vivo-lista" class="vivo-lista" aria-busy="true"></div>
+          <div class="vivo-tabela-caixa" style="overflow:auto; max-height:68vh">
             <table class="vivo-tabela">
               <thead>
                 <tr>
@@ -859,6 +1228,7 @@
         </div>
       </div>
     </section>
+    <div id="vivo-cortina" class="vivo-cortina" hidden></div>
   </main>
 
   <main id="aba-inlog" class="painel">
@@ -974,6 +1344,24 @@
     <input id="hora-fim-segtrack" type="time" value="05:59" />
   </div>
     </div>
+  </div>
+  <nav class="nav-app" aria-label="Seções">
+    <button type="button" data-nav="vivo">Ao vivo</button>
+    <button type="button" data-nav="uni">Relatórios</button>
+    <button type="button" id="nav-mais" data-nav="mais" aria-expanded="false" aria-controls="painel-mais">Mais</button>
+  </nav>
+  <div id="painel-mais" class="painel-mais" hidden>
+    <h2>Relatórios e ferramentas</h2>
+    <button type="button" data-ir="uni">Gerar relatório</button>
+    <p class="mais-nota">PDF e Word ficam em Baixar, no relatório. GPKG fica em Inlog e Argos.</p>
+    <button type="button" data-ir="inlog">Inlog</button>
+    <button type="button" data-ir="argos">Argos</button>
+    <button type="button" data-ir="segtrack">Segtrack</button>
+    <h2 class="mais-separa">Turno</h2>
+    <button type="button" id="mais-pausa" title="Pausa só a atualização desta tela. A sincronização do servidor continua.">Pausar tela</button>
+    <p class="mais-nota">Pausa só esta tela. O servidor continua sincronizando.</p>
+    <button type="button" class="perigo" id="mais-encerrar" hidden>Encerrar turno</button>
+    <button type="button" id="mais-reabrir" hidden>Reabrir turno</button>
   </div>
 
     <script>
@@ -1248,6 +1636,8 @@
       uni: ["Relatório", "Relatório do dia", "Diurno: 06:00–18:59. Noturno: a partir das 19:00 até 05:59. Cada um traz os polígonos do dia e desenha a trajetória dentro deles."],
       vivo: ["CCO", "Conclusão de Rotas — Ao Vivo", "Segtrack. O painel abre o último estado salvo do turno e continua lendo esse estado em segundo plano."],
       segtrack: ["GPS", "Segtrack", "Busca o GPS da Segtrack, no dia escolhido no topo."],
+      inlog: ["GPS", "Inlog", "Busca o GPS da Inlog e mantém PDF e GPKG."],
+      argos: ["GPS", "Argos", "Busca o GPS da Argos e mantém PDF e GPKG."],
     };
 
     function abrirEmpresa(nome) {
@@ -1258,10 +1648,19 @@
       mostrarAba("uni");
     }
 
+    function fecharMais() {
+      document.body.classList.remove("mais-aberto");
+      const painel = $("painel-mais");
+      const botao = $("nav-mais");
+      if (painel) painel.hidden = true;
+      if (botao) botao.setAttribute("aria-expanded", "false");
+    }
+
     function mostrarAba(nome) {
-      if (nome !== "uni" && nome !== "segtrack" && nome !== "vivo") nome = "uni";
+      if (nome !== "uni" && nome !== "segtrack" && nome !== "vivo" && nome !== "inlog" && nome !== "argos") nome = "uni";
       aba = nome;
       document.body.dataset.pagina = nome;
+      fecharMais();
       ["uni", "inlog", "argos", "segtrack", "vivo"].forEach((id) => {
         const el = $("aba-" + id);
         if (!el) return;
@@ -1272,6 +1671,13 @@
       $("tab-uni").className = nome === "uni" ? "nav-item ativo" : "nav-item";
       const tabVivo = $("tab-vivo");
       if (tabVivo) tabVivo.className = nome === "vivo" ? "nav-item ativo" : "nav-item";
+      const navAtual = nome === "vivo" ? "vivo" : nome === "uni" ? "uni" : "mais";
+      document.querySelectorAll(".nav-app button[data-nav]").forEach((botao) => {
+        const on = botao.dataset.nav === navAtual;
+        botao.classList.toggle("ativo", on);
+        if (on && botao.dataset.nav !== "mais") botao.setAttribute("aria-current", "page");
+        else botao.removeAttribute("aria-current");
+      });
       const sel = $("sel-empresa");
       if (sel) {
         sel.value = nome === "segtrack" ? nome : "";
@@ -2568,6 +2974,7 @@
     let vivoGrupo = "todas";
     let vivoOrdem = { campo: "codigo", dir: 1 };
     let vivoCodigo = "";
+    let vivoFichaAberta = false;
     let vivoPausado = false;
     let vivoTimer = 0;
     let vivoMapaUrl = "";
@@ -2606,13 +3013,44 @@
       if (!vivoPausado) vivoTimer = setInterval(() => lerVivo(false), VIVO_LEITURA_MS);
     }
 
+    function telaEstreita() {
+      return window.matchMedia("(max-width: 900px)").matches;
+    }
+
+    function turnoJaPassou() {
+      const campo = $("data-vivo");
+      if (!campo || !campo.value) return false;
+      const partes = campo.value.split("-").map(Number);
+      if (partes.length !== 3 || partes.some((n) => !n)) return false;
+      const fim = turnoVivo() === "noturno"
+        ? new Date(partes[0], partes[1] - 1, partes[2] + 1, 5, 59, 59)
+        : new Date(partes[0], partes[1] - 1, partes[2], 18, 59, 59);
+      return Date.now() > fim.getTime();
+    }
+
+    function semAtualizacaoTela(estado) {
+      return turnoEncerrado(estado) || !!(estado && estado.vazio && turnoJaPassou());
+    }
+
+    function horaConsolidar(estado) {
+      const achou = String((estado && estado.consolidar_ate) || "").match(/(?:T|\s)(\d{2}:\d{2})/);
+      return achou ? achou[1] : "";
+    }
+
+    function rotuloDiaTurno() {
+      const data = ($("data-vivo") && $("data-vivo").value) || "";
+      const partes = data.split("-");
+      const dia = partes.length === 3 ? partes[2] + "/" + partes[1] + "/" + partes[0] : data;
+      return dia + " — " + nomeTurnoCurto();
+    }
+
     function pintarAvisoVivo(estado, falhaRede) {
       const el = $("vivo-aviso");
       if (!el) return;
       el.className = "vivo-aviso";
       if (falhaRede && vivoEstado && vivoEstado.atualizado_hora) {
         el.classList.add("err");
-        el.textContent = "Falha na atualização — exibindo dados de " + vivoEstado.atualizado_hora;
+        el.textContent = "⚠ Falha na atualização · dados de " + vivoEstado.atualizado_hora;
         return;
       }
       if (estado && estado.situacao === "ENCERRADO") {
@@ -2620,27 +3058,37 @@
         el.textContent = "Turno encerrado — dados históricos";
         return;
       }
+      if (estado && estado.situacao === "FINALIZANDO") {
+        el.classList.add("run");
+        const hora = horaConsolidar(estado);
+        el.textContent = hora ? "Consolidando GPS até " + hora : "Consolidando GPS do turno";
+        return;
+      }
       if (estado && estado.atualizando) {
         el.classList.add("run");
-        el.textContent = estado.aviso || "Atualização em andamento...";
+        el.textContent = "Atualizando...";
         return;
       }
       if (estado && estado.falha) {
         el.classList.add("err");
         const hora = (vivoEstado && vivoEstado.atualizado_hora) || estado.atualizado_hora || "";
-        el.textContent = hora ? "Falha na atualização — exibindo dados de " + hora : "Falha na atualização.";
+        el.textContent = hora ? "⚠ Falha na atualização · dados de " + hora : "⚠ Falha na atualização";
         return;
       }
       if (estado && estado.vazio) {
-        el.classList.add("run");
-        el.textContent = (estado.aviso || "Ainda não há estado salvo deste turno.") + " Período: " + (estado.periodo || "");
+        el.textContent = "Nenhum dado encontrado\nNão há operação salva para " + rotuloDiaTurno() + ".";
         return;
       }
       el.classList.add("ok");
       const hora = (estado && estado.atualizado_hora) || "—";
       const seguinte = vivoPausado ? "pausada" : proximaLeitura();
       const tele = rotuloTelemetria(estado && estado.telemetria);
-      el.textContent = "Última atualização: " + hora + " · Próxima leitura: " + seguinte + " · " + ((estado && estado.periodo) || "") + (tele ? " · " + tele : "");
+      if (telaEstreita()) {
+        const extra = estado && estado.telemetria && estado.telemetria !== "atualizado" ? " · " + tele : "";
+        el.textContent = "Atualizado " + hora + extra;
+      } else {
+        el.textContent = "Última atualização: " + hora + " · Próxima leitura: " + seguinte + " · " + ((estado && estado.periodo) || "") + (tele ? " · " + tele : "");
+      }
     }
 
     function turnoEncerrado(estado) {
@@ -2655,36 +3103,55 @@
       return partes[2] + "/" + partes[1] + "/" + partes[0] + " " + nome;
     }
 
+    function nomeTurnoCurto() {
+      return turnoVivo() === "noturno" ? "Noturno" : "Diurno";
+    }
+
     function pintarFaseVivo(estado) {
       const el = $("vivo-fase");
       if (!el) return;
       const sit = (estado && estado.situacao) || "";
-      el.hidden = !sit;
       el.className = "vivo-fase";
-      if (sit === "FINALIZANDO") {
+      el.hidden = !sit;
+      if (!sit) el.textContent = "";
+      else if (sit === "FINALIZANDO") {
         el.classList.add("finalizando");
-        el.textContent = "🟡 Finalizando";
+        el.textContent = "🟡 Finalizando · " + nomeTurnoCurto();
       } else if (sit === "ENCERRADO") {
         el.classList.add("encerrado");
-        el.textContent = "⚫ Encerrado";
+        el.textContent = "⚫ Encerrado · Histórico";
       } else if (sit === "ABERTO") {
         el.classList.add("aberto");
-        el.textContent = "🟢 Ao vivo";
+        el.textContent = "🟢 Ao vivo · " + nomeTurnoCurto();
       }
+      const historico = semAtualizacaoTela(estado);
       const agoraBtn = $("btn-vivo-agora");
       const pausaBtn = $("btn-vivo-pausa");
       const encerrarBtn = $("btn-vivo-encerrar");
       const reabrirBtn = $("btn-vivo-reabrir");
-      const historico = sit === "ENCERRADO";
-      if (agoraBtn) agoraBtn.disabled = historico;
-      if (pausaBtn) pausaBtn.disabled = historico;
-      if (encerrarBtn) encerrarBtn.hidden = !(sit === "ABERTO" || sit === "FINALIZANDO");
-      if (reabrirBtn) reabrirBtn.hidden = !historico;
+      const maisPausa = $("mais-pausa");
+      const maisEncerrar = $("mais-encerrar");
+      const maisReabrir = $("mais-reabrir");
+      if (agoraBtn) {
+        agoraBtn.hidden = historico;
+        agoraBtn.disabled = historico;
+      }
+      if (pausaBtn) {
+        pausaBtn.disabled = historico;
+        pausaBtn.hidden = historico;
+      }
+      if (maisPausa) maisPausa.hidden = historico;
+      const podeEncerrar = sit === "ABERTO" || sit === "FINALIZANDO";
+      if (encerrarBtn) encerrarBtn.hidden = !podeEncerrar;
+      if (maisEncerrar) maisEncerrar.hidden = !podeEncerrar;
+      const encerrado = sit === "ENCERRADO";
+      if (reabrirBtn) reabrirBtn.hidden = !encerrado;
+      if (maisReabrir) maisReabrir.hidden = !encerrado;
     }
 
     function acompanharVivo(estado) {
       pintarFaseVivo(estado);
-      if (turnoEncerrado(estado)) {
+      if (semAtualizacaoTela(estado)) {
         pararRelogioVivo();
         return;
       }
@@ -2712,22 +3179,30 @@
 
     function pintarCardsVivo(resumo) {
       const r = resumo || {};
+      const caixa = $("vivo-cards");
       const itens = [
-        ["Rotas previstas", r.previstas ?? 0, ""],
+        ["Rotas", r.previstas ?? 0, ""],
         ["Concluídas", r.concluidas ?? 0, "st-concluida"],
         ["Parciais", r.parciais ?? 0, "st-parcial"],
-        ["Início de coleta", r.inicio ?? 0, "st-inicio"],
+        ["Início", r.inicio ?? 0, "st-inicio"],
         ["Não iniciadas", r.nao_iniciadas ?? 0, "st-nao"],
         ["Só passagem", r.passagem ?? 0, "st-passagem"],
-        ["% geral", (r.percentual_geral ?? 0) + "%", "geral"],
       ];
-      $("vivo-cards").innerHTML = itens.map(([nome, valor, cls]) =>
-        `<div class="vivo-card ${cls}"><span>${nome}</span><strong class="${cls}">${valor}</strong></div>`
-      ).join("");
-      const apoio = $("vivo-apoio");
       const n = r.apoios || 0;
-      apoio.hidden = n <= 0;
+      if (n > 0) itens.push(["Apoio", n, "st-apoio"]);
+      caixa.classList.remove("vivo-esqueleto");
+      caixa.removeAttribute("aria-busy");
+      caixa.innerHTML = `<div class="vivo-card geral vivo-hero"><strong class="geral">${r.percentual_geral ?? 0}%</strong><span>Execução geral</span></div><div class="vivo-grade">${itens.map(([nome, valor, cls]) => `<div class="vivo-card ${cls}"><strong class="${cls}">${valor}</strong><span>${nome}</span></div>`).join("")}</div>`;
+      const apoio = $("vivo-apoio");
+      apoio.hidden = true;
       $("vivo-apoio-n").textContent = String(n);
+    }
+
+    function horaCurta(valor) {
+      const texto = String(valor || "").trim();
+      if (!texto || texto === "—") return "—";
+      const achou = texto.match(/(\d{2}:\d{2})/);
+      return achou ? achou[1] : texto;
     }
 
     function rotasVisiveis() {
@@ -2745,47 +3220,76 @@
 
     function pintarTabelaVivo() {
       const corpo = $("vivo-linhas");
+      const lista = $("vivo-lista");
       const linhas = rotasVisiveis();
+      const filtro = $("vivo-filtro-movel");
+      if (filtro && filtro.value !== vivoGrupo) filtro.value = vivoGrupo;
       $("vivo-vazio").hidden = linhas.length > 0;
-      corpo.innerHTML = linhas.map((r) => {
+      if (lista) lista.removeAttribute("aria-busy");
+      const htmlLinha = (r) => {
         const pct = Math.max(0, Math.min(100, Number(r.percentual) || 0));
         const cls = classeStatus(r.grupo);
-        return `<tr data-codigo="${r.codigo}" class="${r.codigo === vivoCodigo ? "sel" : ""}">
-          <td>${r.codigo || r.rota || "—"}</td>
-          <td>${r.veiculo || "—"}</td>
-          <td>${r.placa || "—"}</td>
-          <td>${r.inicio || "—"}</td>
-          <td class="${cls}">${pct.toFixed(0)}%<div class="barra-pct"><i style="width:${pct}%"></i></div></td>
-          <td class="${cls}">${r.status || "—"}</td>
-          <td>${r.ultimo_gps || "—"}</td>
-        </tr>`;
-      }).join("");
+        const codigo = escaparVivo(r.codigo || "");
+        const sel = r.codigo === vivoCodigo ? "sel" : "";
+        return {
+          tabela: `<tr data-codigo="${codigo}" class="${sel}">
+          <td>${escaparVivo(r.codigo || r.rota || "—")}</td>
+          <td>${escaparVivo(r.veiculo || "—")}</td>
+          <td>${escaparVivo(r.placa || "—")}</td>
+          <td>${escaparVivo(r.inicio || "—")}</td>
+          <td class="${cls}">${pct.toFixed(0)}%<div class="barra-pct" aria-hidden="true"><i style="width:${pct}%"></i></div></td>
+          <td class="${cls}">${escaparVivo(r.status || "—")}</td>
+          <td>${escaparVivo(r.ultimo_gps || "—")}</td>
+        </tr>`,
+          card: `<article class="rota-movel ${sel}">
+          <button type="button" class="rota-abrir" data-abrir="${codigo}">
+            <span class="rota-movel-topo"><strong>${escaparVivo(r.codigo || r.rota || "—")}</strong><span class="${cls}">${pct.toFixed(0)}%</span></span>
+            <span class="rota-status ${cls}">${escaparVivo(r.status || "—")}</span>
+            <span class="barra-pct ${cls}" aria-hidden="true"><i style="width:${pct}%"></i></span>
+            <span class="rota-linha">${escaparVivo(r.veiculo || "—")} · ${escaparVivo(r.placa || "—")}</span>
+            <span class="rota-linha">Início ${escaparVivo(horaCurta(r.inicio))} · GPS ${escaparVivo(horaCurta(r.ultimo_gps))}</span>
+          </button>
+          <button type="button" class="vivo-ir-mapa" data-codigo="${codigo}">Ver no mapa</button>
+        </article>`,
+        };
+      };
+      const pronto = linhas.map(htmlLinha);
+      corpo.innerHTML = pronto.map((item) => item.tabela).join("");
+      if (lista) lista.innerHTML = pronto.map((item) => item.card).join("");
     }
 
     function pintarDetalheVivo(rota) {
       const box = $("vivo-detalhe");
-      if (!rota) {
+      const cortina = $("vivo-cortina");
+      const estreito = window.matchMedia("(max-width: 900px)").matches;
+      if (!box) return;
+      if (!vivoFichaAberta || !rota) {
         box.hidden = true;
         box.innerHTML = "";
+        if (cortina) cortina.hidden = true;
         return;
       }
       box.hidden = false;
+      if (cortina) cortina.hidden = !estreito;
+      const codigo = escaparVivo(rota.codigo || "");
+      const titulo = escaparVivo(rota.codigo || rota.rota || "—");
+      const nomeLongo = rota.rota && rota.rota !== rota.codigo ? `<p class="rota-linha">${escaparVivo(rota.rota)}</p>` : "";
       const linhas = [
-        ["Rota", rota.rota || rota.codigo],
+        ["Status", rota.status],
+        ["Execução", (Number(rota.percentual) || 0).toFixed(0) + "%"],
         ["Veículo", rota.veiculo],
         ["Placa", rota.placa],
-        ["Turno", (vivoEstado && vivoEstado.periodo) || ""],
         ["Início", rota.inicio || "—"],
-        ["Último GPS na rota", rota.ultimo_gps || "—"],
-        ["Tempo entre entrada e saída", rota.tempo_em_rota || "—"],
-        ["Execução", (Number(rota.percentual) || 0).toFixed(0) + "%"],
-        ["Status", rota.status],
+        ["Último GPS", rota.ultimo_gps || "—"],
         ["Entrada", rota.entrada_hora || "—"],
         ["Saída", rota.saida_hora || "—"],
-        ["Km no polígono", rota.km_coleta || "—"],
-        ["Km oficial", rota.km_oficial || "—"],
       ];
-      box.innerHTML = linhas.map(([k, v]) => `<div><b>${k}:</b> ${v || "—"}</div>`).join("");
+      box.innerHTML = `<span class="vivo-alca" aria-hidden="true"></span><div class="rota-movel-topo"><h2 id="vivo-sheet-titulo" style="margin:0;font-size:18px">Rota ${titulo}</h2><button type="button" class="sec vivo-fechar-ficha">Fechar</button></div>${nomeLongo}`
+        + `<div class="vivo-ficha-acoes"><button type="button" class="vivo-ir-mapa" data-codigo="${codigo}">Ver no mapa</button><button type="button" class="vivo-so-rota" data-codigo="${codigo}">Ver detalhes da execução</button></div>`
+        + linhas.map(([k, v]) => `<div><b>${k}</b> ${escaparVivo(v || "—")}</div>`).join("");
+      box.setAttribute("role", "dialog");
+      box.setAttribute("aria-modal", estreito ? "true" : "false");
+      box.setAttribute("aria-labelledby", "vivo-sheet-titulo");
     }
 
     const CORES_VIVO = {
@@ -2843,24 +3347,14 @@
     function htmlPopup(codigo) {
       const r = rotaVivo(codigo) || { codigo };
       const pct = (Number(r.percentual) || 0).toFixed(0) + "%";
-      const linhas = [
-        ["Rota", r.codigo || codigo],
-        ["Veículo", r.veiculo || "—"],
-        ["Placa", r.placa || "—"],
-        ["Status", r.status || "—"],
-        ["Execução", pct],
-        ["Início", r.inicio || "—"],
-        ["Último GPS", r.ultimo_gps || "—"],
-        ["Entrada", r.entrada_hora || "—"],
-        ["Saída", r.saida_hora || "—"],
-      ];
-      return `<div class="vivo-popup">${linhas.map(([k, v]) => `<div><b>${k}</b> ${escaparVivo(v)}</div>`).join("")}<button type="button" class="vivo-so-rota" data-codigo="${escaparVivo(codigo)}">Ver somente esta rota</button></div>`;
+      return `<div class="vivo-popup"><strong>${escaparVivo(r.codigo || codigo)}</strong><div>${escaparVivo(r.status || "—")} · ${pct}</div><div>${escaparVivo(r.veiculo || "—")}</div><div>${escaparVivo(r.placa || "—")}</div><div>Último GPS ${escaparVivo(r.ultimo_gps || "—")}</div><button type="button" class="vivo-abrir-ficha" data-codigo="${escaparVivo(codigo)}">Detalhes</button></div>`;
     }
 
     function garantirMapaVivo() {
       if (vivoMapa || !window.L) return vivoMapa;
       const folha = $("vivo-folha");
       if (!folha) return null;
+      const estreito = window.matchMedia("(max-width: 900px)").matches;
       vivoMapa = L.map(folha, { zoomControl: true }).setView([-16.82, -49.24], 12);
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: "&copy; OpenStreetMap",
@@ -2881,9 +3375,13 @@
         "Saída": vivoGrupoSai,
         "Trechos executados": vivoGrupoFeitos,
         "Trechos faltantes": vivoGrupoFalta,
-      }, { collapsed: false }).addTo(vivoMapa);
+      }, { collapsed: estreito }).addTo(vivoMapa);
       window.vivoMapa = vivoMapa;
       setTimeout(() => vivoMapa && vivoMapa.invalidateSize(), 50);
+      if (!window.__vivoResize) {
+        window.__vivoResize = true;
+        window.addEventListener("resize", () => { if (vivoMapa) vivoMapa.invalidateSize(); });
+      }
       return vivoMapa;
     }
 
@@ -2944,9 +3442,12 @@
           layer.on("click", () => {
             vivoCodigo = codigo;
             pintarTabelaVivo();
-            pintarDetalheVivo(rotaVivo(codigo));
-            const tr = document.querySelector('#vivo-linhas tr[data-codigo="' + codigo + '"]');
-            if (tr) tr.scrollIntoView({ block: "nearest" });
+            if (!window.matchMedia("(max-width: 900px)").matches) {
+              vivoFichaAberta = true;
+              pintarDetalheVivo(rotaVivo(codigo));
+              const tr = document.querySelector('#vivo-linhas tr[data-codigo="' + codigo + '"]');
+              if (tr) tr.scrollIntoView({ block: "nearest" });
+            }
             atualizarBotoesMapa();
           });
         },
@@ -2959,6 +3460,8 @@
       const folha = $("vivo-folha");
       if (folha) {
         folha.dataset.pronto = "1";
+        const espera = $("vivo-mapa-espera");
+        if (espera) espera.hidden = true;
         folha.dataset.poligonos = String(Object.keys(vivoCamadas).length);
         folha.dataset.desenhoMs = String(vivoDesenhoMs);
       }
@@ -3022,6 +3525,24 @@
       if (vivoGrupoSai) vivoGrupoSai.clearLayers();
     }
 
+    const vivoDetalheCache = {};
+
+    function desenharDetalheRota(codigo, det) {
+      if (!det) return;
+      if (det.trechos_feitos) L.geoJSON(det.trechos_feitos, { style: { color: "#1b8a5a", weight: 5, opacity: 0.9 } }).eachLayer((l) => vivoGrupoFeitos.addLayer(l));
+      if (det.trechos_faltando) L.geoJSON(det.trechos_faltando, { style: { color: "#b34145", weight: 4, opacity: 0.85, dashArray: "6 4" } }).eachLayer((l) => vivoGrupoFalta.addLayer(l));
+      if (det.entrada) L.circleMarker([det.entrada.lat, det.entrada.lon], { radius: 8, color: "#1b8a5a", fillColor: "#1b8a5a", fillOpacity: 1 }).bindTooltip("Entrada " + (det.entrada.hora || "")).addTo(vivoGrupoEnt);
+      if (det.saida) L.circleMarker([det.saida.lat, det.saida.lon], { radius: 8, color: "#b34145", fillColor: "#b34145", fillOpacity: 1 }).bindTooltip("Saída " + (det.saida.hora || "")).addTo(vivoGrupoSai);
+      const folha = $("vivo-folha");
+      if (folha) {
+        folha.dataset.feitos = String((det.trechos_feitos && det.trechos_feitos.features || []).length);
+        folha.dataset.faltando = String((det.trechos_faltando && det.trechos_faltando.features || []).length);
+        folha.dataset.entrada = det.entrada ? "1" : "0";
+        folha.dataset.saida = det.saida ? "1" : "0";
+        folha.dataset.foco = codigo;
+      }
+    }
+
     async function verSomenteRota(codigo) {
       if (!codigo || !garantirMapaVivo()) return;
       vivoFoco = codigo;
@@ -3035,27 +3556,22 @@
       limparDetalheRota();
       const data = ($("data-vivo") && $("data-vivo").value) || "";
       const turno = turnoVivo();
-      const resp = await fetch("/api/live-report/route-detail?data=" + encodeURIComponent(data) + "&turno=" + encodeURIComponent(turno) + "&rota=" + encodeURIComponent(codigo), { cache: "no-store" });
-      if (resp.ok) {
-        const det = await resp.json();
-        if (det.trechos_feitos) L.geoJSON(det.trechos_feitos, { style: { color: "#1b8a5a", weight: 5, opacity: 0.9 } }).eachLayer((l) => vivoGrupoFeitos.addLayer(l));
-        if (det.trechos_faltando) L.geoJSON(det.trechos_faltando, { style: { color: "#b34145", weight: 4, opacity: 0.85, dashArray: "6 4" } }).eachLayer((l) => vivoGrupoFalta.addLayer(l));
-        if (det.entrada) L.circleMarker([det.entrada.lat, det.entrada.lon], { radius: 8, color: "#1b8a5a", fillColor: "#1b8a5a", fillOpacity: 1 }).bindTooltip("Entrada " + (det.entrada.hora || "")).addTo(vivoGrupoEnt);
-        if (det.saida) L.circleMarker([det.saida.lat, det.saida.lon], { radius: 8, color: "#b34145", fillColor: "#b34145", fillOpacity: 1 }).bindTooltip("Saída " + (det.saida.hora || "")).addTo(vivoGrupoSai);
-        const folha = $("vivo-folha");
-        if (folha) {
-          folha.dataset.feitos = String((det.trechos_feitos && det.trechos_feitos.features || []).length);
-          folha.dataset.faltando = String((det.trechos_faltando && det.trechos_faltando.features || []).length);
-          folha.dataset.entrada = det.entrada ? "1" : "0";
-          folha.dataset.saida = det.saida ? "1" : "0";
-          folha.dataset.foco = codigo;
+      const chave = data + "|" + turno + "|" + codigo;
+      let det = vivoDetalheCache[chave];
+      if (!det) {
+        const resp = await fetch("/api/live-report/route-detail?data=" + encodeURIComponent(data) + "&turno=" + encodeURIComponent(turno) + "&rota=" + encodeURIComponent(codigo), { cache: "no-store" });
+        if (resp.ok) {
+          det = await resp.json();
+          vivoDetalheCache[chave] = det;
         }
       }
+      desenharDetalheRota(codigo, det);
       if (!vivoMapa.hasLayer(vivoGrupoFeitos)) vivoGrupoFeitos.addTo(vivoMapa);
       if (!vivoMapa.hasLayer(vivoGrupoFalta)) vivoGrupoFalta.addTo(vivoMapa);
       if (!vivoMapa.hasLayer(vivoGrupoEnt)) vivoGrupoEnt.addTo(vivoMapa);
       if (!vivoMapa.hasLayer(vivoGrupoSai)) vivoGrupoSai.addTo(vivoMapa);
       pintarTabelaVivo();
+      vivoFichaAberta = !telaEstreita();
       pintarDetalheVivo(rota);
       atualizarBotoesMapa();
     }
@@ -3125,6 +3641,7 @@
         return;
       }
       vivoEstado = estado;
+      window.vivoEstado = estado;
       acompanharVivo(estado);
       pintarAvisoVivo(estado, false);
       pintarCardsVivo(estado.resumo);
@@ -3134,8 +3651,25 @@
       sincronizarMapaVivo(estado).catch(() => {});
     }
 
+    let vivoPedido = false;
+
+    function mesmoTurnoNaTela() {
+      if (!vivoEstado) return false;
+      const data = ($("data-vivo") && $("data-vivo").value) || "";
+      const turno = turnoVivo();
+      return String(vivoEstado.data || "") === data && String(vivoEstado.turno || "") === turno;
+    }
+
     async function lerVivo(forcar) {
-      if (forcar && turnoEncerrado(vivoEstado)) return;
+      if (vivoPedido) return;
+      if (forcar && semAtualizacaoTela(vivoEstado)) return;
+      if (!forcar && mesmoTurnoNaTela() && semAtualizacaoTela(vivoEstado)) return;
+      vivoPedido = true;
+      const btn = $("btn-vivo-agora");
+      if (forcar && btn) {
+        btn.classList.add("ocupado");
+        btn.setAttribute("aria-busy", "true");
+      }
       const data = ($("data-vivo") && $("data-vivo").value) || "";
       const turno = turnoVivo();
       try {
@@ -3154,6 +3688,12 @@
         aplicarEstadoVivo(estado);
       } catch (e) {
         pintarAvisoVivo(vivoEstado, true);
+      } finally {
+        vivoPedido = false;
+        if (btn) {
+          btn.classList.remove("ocupado");
+          btn.removeAttribute("aria-busy");
+        }
       }
     }
 
@@ -3211,7 +3751,10 @@
     if (btnPausa) {
       btnPausa.addEventListener("click", () => {
         vivoPausado = !vivoPausado;
-        btnPausa.textContent = vivoPausado ? "Retomar atualização" : "Pausar atualização";
+        const rotulo = vivoPausado ? "Retomar tela" : "Pausar tela";
+        btnPausa.textContent = rotulo;
+        const maisPausa = $("mais-pausa");
+        if (maisPausa) maisPausa.textContent = rotulo;
         if (vivoPausado) pararRelogioVivo();
         else if (aba === "vivo") {
           lerVivo(false);
@@ -3230,6 +3773,14 @@
         pintarTabelaVivo();
       });
     }
+    const filtroMovel = $("vivo-filtro-movel");
+    if (filtroMovel) {
+      filtroMovel.addEventListener("change", () => {
+        vivoGrupo = filtroMovel.value;
+        if (filtrosVivo) filtrosVivo.querySelectorAll("button").forEach((el) => el.classList.toggle("ativo", el.dataset.grupo === vivoGrupo));
+        pintarTabelaVivo();
+      });
+    }
     document.querySelectorAll(".vivo-tabela th").forEach((th) => {
       th.addEventListener("click", () => {
         const campo = th.dataset.ord;
@@ -3244,6 +3795,7 @@
         const tr = ev.target.closest("tr[data-codigo]");
         if (!tr) return;
         vivoCodigo = tr.dataset.codigo || "";
+        vivoFichaAberta = true;
         pintarTabelaVivo();
         const rota = ((vivoEstado && vivoEstado.rotas) || []).find((r) => r.codigo === vivoCodigo);
         pintarDetalheVivo(rota || null);
@@ -3251,17 +3803,134 @@
         atualizarBotoesMapa();
       });
     }
+    const listaVivo = $("vivo-lista");
+    if (listaVivo) {
+      listaVivo.addEventListener("click", (ev) => {
+        const alvo = ev.target.closest("[data-abrir], .vivo-ir-mapa");
+        if (!alvo) return;
+        vivoCodigo = alvo.dataset.abrir || alvo.dataset.codigo || "";
+        if (alvo.classList.contains("vivo-ir-mapa")) {
+          irParaMapa(vivoCodigo);
+          return;
+        }
+        vivoFichaAberta = true;
+        pintarTabelaVivo();
+        pintarDetalheVivo(rotaVivo(vivoCodigo));
+      });
+    }
     const btnSo = $("vivo-so");
     if (btnSo) btnSo.addEventListener("click", () => verSomenteRota(vivoCodigo));
     const btnTodas = $("vivo-todas");
     if (btnTodas) btnTodas.addEventListener("click", () => mostrarTodasRotas());
+    function irParaMapa(codigo) {
+      vivoCodigo = codigo || vivoCodigo;
+      vivoFichaAberta = false;
+      pintarDetalheVivo(null);
+      document.body.classList.remove("vivo-rotas");
+      atualizarVistaVivo();
+      pintarTabelaVivo();
+      requestAnimationFrame(() => {
+        if (!vivoMapa) return;
+        vivoMapa.invalidateSize();
+        requestAnimationFrame(() => {
+          focarMapaVivo(vivoCodigo);
+          atualizarBotoesMapa();
+        });
+      });
+    }
+    function atualizarVistaVivo() {
+      const rotas = document.body.classList.contains("vivo-rotas");
+      const mapa = $("vivo-ver-mapa");
+      const lista = $("vivo-ver-rotas");
+      if (mapa) mapa.setAttribute("aria-selected", rotas ? "false" : "true");
+      if (lista) lista.setAttribute("aria-selected", rotas ? "true" : "false");
+    }
+    const verMapa = $("vivo-ver-mapa");
+    const verRotas = $("vivo-ver-rotas");
+    if (verMapa) {
+      verMapa.addEventListener("click", () => {
+        document.body.classList.remove("vivo-rotas");
+        atualizarVistaVivo();
+        requestAnimationFrame(() => vivoMapa && vivoMapa.invalidateSize());
+      });
+    }
+    if (verRotas) {
+      verRotas.addEventListener("click", () => {
+        document.body.classList.add("vivo-rotas");
+        atualizarVistaVivo();
+      });
+    }
+    function fecharFichaVivo() {
+      vivoFichaAberta = false;
+      pintarDetalheVivo(null);
+    }
+    const cortinaVivo = $("vivo-cortina");
+    if (cortinaVivo) cortinaVivo.addEventListener("click", fecharFichaVivo);
     document.addEventListener("click", (ev) => {
+      const fechar = ev.target.closest && ev.target.closest(".vivo-fechar-ficha");
+      if (fechar) {
+        ev.preventDefault();
+        fecharFichaVivo();
+        return;
+      }
+      const ficha = ev.target.closest && ev.target.closest(".vivo-abrir-ficha");
+      if (ficha) {
+        ev.preventDefault();
+        vivoCodigo = ficha.dataset.codigo || "";
+        vivoFichaAberta = true;
+        pintarTabelaVivo();
+        pintarDetalheVivo(rotaVivo(vivoCodigo));
+        if (vivoMapa) vivoMapa.closePopup();
+        return;
+      }
+      const ir = ev.target.closest && ev.target.closest(".vivo-detalhe .vivo-ir-mapa");
+      if (ir) {
+        ev.preventDefault();
+        irParaMapa(ir.dataset.codigo || vivoCodigo);
+        return;
+      }
       const btn = ev.target.closest && ev.target.closest(".vivo-so-rota");
       if (!btn) return;
       ev.preventDefault();
-      verSomenteRota(btn.dataset.codigo || "");
+      document.body.classList.remove("vivo-rotas");
+      atualizarVistaVivo();
+      const codigoExec = btn.dataset.codigo || "";
+      requestAnimationFrame(() => {
+        if (vivoMapa) vivoMapa.invalidateSize();
+        verSomenteRota(codigoExec);
+      });
     });
-    if (location.hash === "#vivo") mostrarAba("vivo");
+    document.addEventListener("keydown", (ev) => {
+      if (ev.key === "Escape") fecharFichaVivo();
+    });
+    document.querySelectorAll(".nav-app button[data-nav]").forEach((botao) => {
+      botao.addEventListener("click", () => {
+        if (botao.dataset.nav === "mais") {
+          const aberto = !document.body.classList.contains("mais-aberto");
+          document.body.classList.toggle("mais-aberto", aberto);
+          const painel = $("painel-mais");
+          if (painel) painel.hidden = !aberto;
+          botao.setAttribute("aria-expanded", aberto ? "true" : "false");
+          const secao = aba === "vivo" ? "vivo" : aba === "uni" ? "uni" : "mais";
+          document.querySelectorAll(".nav-app button[data-nav]").forEach((item) => {
+            const on = aberto ? item === botao : item.dataset.nav === secao;
+            item.classList.toggle("ativo", on);
+          });
+          return;
+        }
+        mostrarAba(botao.dataset.nav);
+      });
+    });
+    document.querySelectorAll("#painel-mais button[data-ir]").forEach((botao) => {
+      botao.addEventListener("click", () => mostrarAba(botao.dataset.ir));
+    });
+    const maisPausaBtn = $("mais-pausa");
+    if (maisPausaBtn) maisPausaBtn.addEventListener("click", () => { const real = $("btn-vivo-pausa"); if (real) real.click(); });
+    const maisEncerrarBtn = $("mais-encerrar");
+    if (maisEncerrarBtn) maisEncerrarBtn.addEventListener("click", () => { const real = $("btn-vivo-encerrar"); if (real) real.click(); });
+    const maisReabrirBtn = $("mais-reabrir");
+    if (maisReabrirBtn) maisReabrirBtn.addEventListener("click", () => { const real = $("btn-vivo-reabrir"); if (real) real.click(); });
+    if (location.hash === "#vivo" || (window.matchMedia("(max-width: 900px)").matches && !location.hash)) mostrarAba("vivo");
   </script>
 </body>
 </html>
