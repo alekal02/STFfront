@@ -1,5 +1,5 @@
 {
-  "name": "segtrack-front",
+  "name": "sala-tecnica-front",
   "private": true,
   "scripts": {
     "build": "node build.mjs"
