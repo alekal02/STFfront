@@ -481,12 +481,63 @@
       border-radius: 8px;
       text-decoration: none;
     }
+    .rotas-bloco { display: grid; gap: 10px; margin-top: 14px; }
+    .rotas-filtros { display: flex; flex-wrap: wrap; gap: 6px; }
+    .rotas-filtros button {
+      background: #eef3f5;
+      color: var(--navy);
+      padding: 8px 12px;
+      font-size: 13px;
+    }
+    .rotas-filtros button.ativo { background: var(--teal); color: #fff; }
+    .rotas-lista { display: grid; gap: 8px; }
+    .rota-card {
+      display: grid;
+      grid-template-columns: 76px 1fr;
+      gap: 10px;
+      align-items: center;
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-left: 6px solid #c5d0d6;
+      border-radius: 12px;
+      background: #fff;
+    }
+    .rota-card .pct { font-size: 22px; font-weight: 800; letter-spacing: -.4px; line-height: 1; }
+    .rota-card .estado { display: block; margin-top: 4px; font-size: 11px; font-weight: 700; letter-spacing: .2px; text-transform: uppercase; color: var(--muted); }
+    .rota-card strong { display: block; font-size: 15px; }
+    .rota-card small { color: var(--muted); }
+    .rota-card.feita { border-left-color: #1b8a5a; background: #f3fbf6; }
+    .rota-card.feita .pct, .rota-card.feita .estado { color: #1b8a5a; }
+    .rota-card.parcial { border-left-color: #c56a1a; background: #fff8f1; }
+    .rota-card.parcial .pct, .rota-card.parcial .estado { color: #c56a1a; }
+    .rota-card.apoio { border-left-color: #1b6f9a; background: #f4f9fc; }
+    .rota-card.apoio .pct, .rota-card.apoio .estado { color: #1b6f9a; }
+    .rota-card.vazia { border-left-color: #b34145; background: #fff6f6; }
+    .rota-card.vazia .pct, .rota-card.vazia .estado { color: #b34145; }
+    .rotas-vazio { margin: 0; color: var(--muted); font-size: 13px; }
     @media (max-width: 860px) {
       .shell { display: block; }
-      .sidebar { width: auto; }
-      .tabs { flex-direction: row; flex-wrap: wrap; }
-      .tabs > button { width: auto; }
-      .topbar { position: static; }
+      .sidebar { width: auto; padding: 14px 12px; gap: 12px; }
+      .brand { padding: 0; }
+      .tabs { gap: 8px; }
+      .nav-grupo { margin: 8px 0 0; }
+      .topbar { position: static; padding: 12px; gap: 12px; }
+      .topbar h1 { font-size: 20px; }
+      .topbar .desc, #hint-ciclo-uni { font-size: 13px; }
+      .topbar-lado, .ciclo, .ciclo-lado, .data-br, .campo { width: 100%; max-width: none; }
+      .topbar-lado { align-items: stretch; }
+      body[data-pagina="uni"] .barra-uni { display: grid; grid-template-columns: 1fr 1fr; width: 100%; }
+      body[data-pagina="uni"] .barra-uni .chk { grid-column: 1 / -1; }
+      body[data-pagina="uni"] .barra-uni button.principal { width: 100%; padding: 12px 10px; }
+      main.painel { padding: 12px 12px 28px; }
+      .card { padding: 12px; border-radius: 12px; }
+      .vistas { width: 100%; }
+      .vistas button { flex: 1; padding: 10px 8px; }
+      .legenda { font-size: 12px; }
+      .titulo-linha { align-items: stretch; }
+      iframe, #unificado-mapa, #mapa, #argos-mapa, #segtrack-mapa { height: 48vh; min-height: 260px; }
+      #unificado-diario, #diario, #argos-diario, #segtrack-diario { min-height: 320px; }
+      .menu-lista { left: 0; right: auto; }
     }
   </style>
 </head>
@@ -514,28 +565,10 @@
           <div id="rota-info" class="rota-info"></div>
           <div id="rota-caminhoes"></div>
         </div>
-        <p class="nav-grupo">GPS</p>
-        <select id="sel-empresa" class="campo-side" title="GPS da Segtrack" onchange="abrirEmpresa(this.value)">
-          <option value="">Escolher...</option>
-          <option value="segtrack">Segtrack</option>
-        </select>
       </nav>
       <div class="sidebar-base">
         <span id="badge" class="badge ok">parado</span>
-        <small>Diurno 06:00–18:59 · Noturno 19:00–05:59</small>
-        <details class="chatbot-box" id="chatbot-box">
-          <summary>Chatbot WhatsApp</summary>
-          <img id="chatbot-qr" alt="QR do WhatsApp" />
-          <select class="campo-side" id="chatbot-grupo" title="Grupo que recebe o relatório">
-            <option value="">Escolher grupo...</option>
-          </select>
-          <label class="chk-side"><input type="checkbox" id="chatbot-auto" checked /> Enviar PDF ao gerar relatório</label>
-          <label class="chk-side"><input type="checkbox" id="chatbot-2h" /> A cada 2 h gera o relatório e envia no grupo</label>
-          <button type="button" class="principal" id="btn-chatbot-sessao" onclick="alternarSessaoChatbot()">Conectar WhatsApp</button>
-          <button type="button" onclick="salvarChatbot()">Salvar grupo</button>
-          <button type="button" class="acao-job" id="btn-chatbot-enviar" onclick="enviarChatbot()">Gerar e enviar no grupo</button>
-          <small id="chatbot-msg">Conecte o WhatsApp, escolha o grupo e clique em Gerar e enviar no grupo. Esta mensagem mostra o retorno: aviso enviado, PDF enviado ou o erro. Escrever no WhatsApp nao gera o relatorio.</small>
-        </details>
+        <small>Diurno 06:00–18:59 · Noturno 19:00–05:59 · GPS Segtrack</small>
       </div>
     </aside>
     <div class="app">
@@ -617,6 +650,16 @@
   <main id="aba-uni" class="painel ativo">
     <section class="card">
       <div class="status" id="status-uni"></div>
+      <div class="rotas-bloco">
+        <div class="rotas-filtros" id="rotas-filtros">
+          <button type="button" data-filtro="feita" class="ativo">Preenchidas</button>
+          <button type="button" data-filtro="parcial">Parciais</button>
+          <button type="button" data-filtro="apoio">Apoio</button>
+          <button type="button" data-filtro="vazia">Sem coleta</button>
+          <button type="button" data-filtro="todas">Todas</button>
+        </div>
+        <div id="rotas-painel" class="rotas-lista"></div>
+      </div>
       <div class="andamento">
         <div class="andamento-topo">
           <span id="msg-uni">Pronto para começar.</span>
@@ -1107,7 +1150,7 @@
     }
 
     function aplicarChatbot(c) {
-      if (!c) return;
+      if (!c || !$("chatbot-box")) return;
       $("chatbot-auto").checked = c.enviar_ao_gerar !== false;
       const chk2h = $("chatbot-2h");
       if (chk2h) chk2h.checked = !!c.disparo_2h;
@@ -1294,6 +1337,7 @@
     }
 
     async function carregarChatbot() {
+      if (!$("chatbot-box")) return;
       try {
         aplicarChatbot(await api("/api/chatbot-config"));
         const box = $("chatbot-box");
@@ -1532,6 +1576,38 @@
       setHtml(id, html);
     }
 
+    let filtroRotas = "feita";
+    let rotasDoDia = [];
+
+    function classeRota(status) {
+      const s = String(status || "").toLowerCase();
+      if (s === "concluída" || s === "concluida") return "feita";
+      if (s.includes("parcial") || s.includes("início") || s.includes("inicio")) return "parcial";
+      if (s.includes("apoio")) return "apoio";
+      return "vazia";
+    }
+
+    function pintarRotas(rotas) {
+      rotasDoDia = rotas || [];
+      const box = $("rotas-painel");
+      if (!box) return;
+      const visiveis = rotasDoDia.filter((r) => filtroRotas === "todas" || classeRota(r.status) === filtroRotas);
+      if (!rotasDoDia.length) {
+        box.innerHTML = '<p class="rotas-vazio">Gere o relatório diurno ou o noturno para ver as rotas preenchidas.</p>';
+        return;
+      }
+      if (!visiveis.length) {
+        box.innerHTML = '<p class="rotas-vazio">Nenhuma rota neste grupo.</p>';
+        return;
+      }
+      box.innerHTML = visiveis.map((r) => {
+        const cls = classeRota(r.status);
+        const nome = r.setor || r.codigo || "Rota";
+        const extra = [r.placa && r.placa !== "—" ? r.placa : "", r.horario || ""].filter(Boolean).join(" · ");
+        return `<article class="rota-card ${cls}"><div><b class="pct">${r.percentual || "0%"}</b><span class="estado">${r.status || "—"}</span></div><div><strong>${nome}</strong><small>${extra || "Segtrack"}</small></div></article>`;
+      }).join("");
+    }
+
     function pintarStatus(info) {
       const y = window.scrollY || document.documentElement.scrollTop || 0;
       const rodando = !!info.job?.rodando;
@@ -1561,6 +1637,7 @@
         <span>Sem coleta: <b>${info.unificado_tem_coleta ? (info.unificado_nao_feitas ?? "-") : "-"}</b></span>
         <span>GPS: <b>Segtrack ${fontes.segtrack || (info.segtrack_tem_coleta ? "ok" : "—")}</b></span>
       `);
+      pintarRotas(info.unificado_rotas || []);
       $("titulo-dia").textContent = cicloInlog;
       $("titulo-mapa").textContent = cicloInlog;
       $("titulo-argos").textContent = cicloArgos;
@@ -2246,6 +2323,16 @@
     $("filtro-rota").addEventListener("change", () => {
       if ($("filtro-rota").value) verRota(false);
     });
+    const filtros = $("rotas-filtros");
+    if (filtros) {
+      filtros.addEventListener("click", (ev) => {
+        const btn = ev.target.closest("button[data-filtro]");
+        if (!btn) return;
+        filtroRotas = btn.dataset.filtro;
+        filtros.querySelectorAll("button").forEach((el) => el.classList.toggle("ativo", el === btn));
+        pintarRotas(rotasDoDia);
+      });
+    }
     carregarRotasDoDia();
     carregarDia(false);
     function agendarStatus(ms) {
