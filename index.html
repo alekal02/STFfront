@@ -562,7 +562,10 @@
       .rota-card .pct { font-size: 26px; }
       .rota-card strong { font-size: 17px; line-height: 1.25; }
       .rota-card small { font-size: 14px; }
-      iframe, #unificado-mapa { height: 62vh; min-height: 320px; }
+      #aba-uni.painel.ativo { display: flex; flex-direction: column; }
+      #aba-uni .visor { order: -1; }
+      #legenda-uni, #aba-uni .vista > .hint { display: none; }
+      iframe, #unificado-mapa { height: calc(100dvh - 132px); min-height: 68vh; }
     }
   </style>
 </head>
@@ -703,7 +706,6 @@
         <div class="vistas" data-alvo="uni">
           <button type="button" class="ativo" data-vista="mapa">Mapa</button>
           <button type="button" data-vista="relatorio">Relatório</button>
-          <button type="button" data-vista="arquivos">Arquivos</button>
         </div>
         <span class="legenda" id="legenda-uni">Faixa preta + laranja = limite oficial da rota. Cada cor = um caminhão.</span>
         <a id="unificado-mapa-link" href="#" target="_blank" hidden>Tela cheia</a>
@@ -716,9 +718,6 @@
       <div class="vista" data-vista-panel="relatorio">
         <p class="hint">Conclusão de rota · <span id="titulo-uni-dia">—</span></p>
         <iframe id="unificado-diario" title="Relatório unificado"></iframe>
-      </div>
-      <div class="vista" data-vista-panel="arquivos">
-        <div id="arquivos-uni">Nenhum arquivo deste dia ainda.</div>
       </div>
     </section>
   </main>
