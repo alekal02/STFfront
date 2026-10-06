@@ -3420,8 +3420,11 @@
 
     function lugarVeiculo(placa) {
       const pos = ((vivoEstado && vivoEstado.posicoes) || []).find((item) => item.placa === placa);
-      if (!pos || !pos.rotulo_rota) return "";
-      return "Rota: " + pos.rotulo_rota;
+      if (!pos) return "";
+      const partes = [];
+      if (pos.rotulo_rota) partes.push("Rota: " + pos.rotulo_rota);
+      if (pos.gps_ha) partes.push("GPS " + pos.gps_ha);
+      return partes.join(" · ");
     }
 
     function desenharPosicoes() {
@@ -3432,31 +3435,27 @@
         vistos.add(pos.placa);
         const marca = vivoPosicao[pos.placa];
         const fora = !!pos.deslocamento;
-        const texto = (pos.placa || "") + (pos.rotulo_rota ? " · " + pos.rotulo_rota : "");
+        const texto = [pos.placa || "", pos.rotulo_rota || "", pos.gps_ha ? "GPS " + pos.gps_ha : ""].filter(Boolean).join(" · ");
+        const estilo = {
+          radius: 7,
+          color: "#102028",
+          weight: 2,
+          fillColor: fora ? "#6d7c86" : "#f2c14e",
+          fillOpacity: 1,
+        };
         if (marca) {
           marca.setLatLng([pos.lat, pos.lon]);
-          marca.setStyle({
-            radius: fora ? 5 : 7,
-            color: fora ? "#8aa0ab" : "#102028",
-            fillColor: fora ? "#d5dee3" : "#f2c14e",
-            fillOpacity: fora ? 0.7 : 0.95,
-          });
+          marca.setStyle(estilo);
           marca.setTooltipContent(texto);
         } else {
-          vivoPosicao[pos.placa] = L.circleMarker([pos.lat, pos.lon], {
-            radius: fora ? 5 : 7,
-            color: fora ? "#8aa0ab" : "#102028",
-            weight: 2,
-            fillColor: fora ? "#d5dee3" : "#f2c14e",
-            fillOpacity: fora ? 0.7 : 0.95,
-          }).bindTooltip(texto, { permanent: false }).addTo(vivoGrupoPos);
+          vivoPosicao[pos.placa] = L.circleMarker([pos.lat, pos.lon], estilo).bindTooltip(texto, { permanent: false }).addTo(vivoGrupoPos);
         }
       });
       Object.keys(vivoPosicao).forEach((placa) => {
-        if (!vistos.has(placa)) {
-          vivoGrupoPos.removeLayer(vivoPosicao[placa]);
-          delete vivoPosicao[placa];
-        }
+        if (vistos.has(placa)) return;
+        const marca = vivoPosicao[placa];
+        const atual = marca.getTooltip() && marca.getTooltip().getContent();
+        if (atual && String(atual).indexOf("sem GPS novo") < 0) marca.setTooltipContent(String(atual) + " · sem GPS novo");
       });
     }
 
