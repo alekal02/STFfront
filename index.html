@@ -682,6 +682,9 @@
       outline-offset: 2px;
     }
     .vivo-marca { display: none; }
+    .vivo-faixa { display: none; margin: 0; }
+    .txt-curto { display: none; }
+    .vivo-fechar-rotas, .vivo-fechar-dificil { display: none; }
     .vivo-cards { display: flex; flex-direction: column; gap: 8px; }
     .vivo-hero {
       display: flex;
@@ -805,57 +808,102 @@
         flex: 1;
         min-height: 0;
         overflow: hidden;
-        padding: 8px 10px var(--nav-h);
-        gap: 8px;
+        padding: 2px 6px var(--nav-h);
+        gap: 2px;
       }
       body[data-pagina="vivo"] #aba-vivo > section.card:first-of-type {
         flex: none;
-        padding: 8px 10px;
+        padding: 0 2px 2px;
+        border: 0;
+        box-shadow: none;
+        background: transparent;
+        border-radius: 0;
       }
       body[data-pagina="vivo"] #aba-vivo > section.card:last-of-type {
+        position: relative;
         flex: 1;
         min-height: 0;
         display: flex;
         flex-direction: column;
         overflow: hidden;
-        padding: 8px;
+        padding: 0;
+        border: 0;
+        box-shadow: none;
+        background: transparent;
+        border-radius: 0;
       }
-      body[data-pagina="vivo"].vivo-rotas #aba-vivo > section.card:last-of-type { overflow: auto; }
-      .vivo-cabeca { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-      .vivo-marca { display: block; margin: 0; line-height: 1.2; }
-      .vivo-marca strong { font-size: 14px; }
-      .vivo-marca span { color: var(--muted); font-size: 12px; margin-left: 6px; }
-      .vivo-fase { margin: 0; }
-      .vivo-aviso { margin-top: 4px; font-size: 13px; font-weight: 650; white-space: pre-line; }
-      body[data-pagina="vivo"] .barra-vivo { width: 100%; display: grid; gap: 8px; justify-content: stretch; }
+      .vivo-cabeca, .vivo-aviso, .vivo-cards, .vivo-hero, .vivo-grade { display: none !important; }
+      .vivo-faixa {
+        display: block;
+        margin: 0;
+        font-size: 12px;
+        font-weight: 750;
+        line-height: 1.25;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      body[data-pagina="vivo"] .topbar { padding: 4px 8px; gap: 0; }
+      body[data-pagina="vivo"] .barra-vivo { width: 100%; display: block; }
       #vivo-apoio { display: none !important; }
       .vivo-controles {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
-        gap: 8px;
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 6px;
         width: 100%;
       }
-      .vivo-controles .campo { min-width: 0; width: 100%; min-height: 44px; }
-      #turno-vivo { display: grid; grid-template-columns: 1fr 1fr; min-width: 0; }
-      #turno-vivo button { min-height: 44px; padding: 8px 4px; font-size: 13px; }
-      .vivo-admin { display: none; }
-      .vivo-hero { padding: 4px 8px; }
-      .vivo-hero strong { font-size: 28px; }
-      .vivo-grade { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
-      .vivo-grade .vivo-card { min-width: 0; padding: 6px; }
-      .vivo-grade .vivo-card span { font-size: 10px; line-height: 1.2; overflow-wrap: anywhere; }
-      .vivo-grade .vivo-card strong { font-size: 16px; margin-top: 0; }
-      .vivo-alterna {
+      .vivo-controles .data-br {
+        flex: 1 1 0;
+        width: auto;
+        min-width: 0;
+        max-width: none;
+      }
+      .vivo-controles .campo,
+      .vivo-controles .data-texto {
+        flex: 1 1 auto;
+        min-width: 0;
+        width: 100%;
+        height: 32px;
+        min-height: 32px;
+        padding: 0 30px 0 8px;
+        font-size: 13px;
+      }
+      #turno-vivo {
+        flex: 0 0 auto;
         display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 8px;
-        margin-bottom: 10px;
+        grid-template-columns: auto auto;
+        width: auto;
+        min-width: 0;
+        min-height: 0;
+        padding: 2px;
+        gap: 2px;
+      }
+      #turno-vivo button { min-height: 28px; height: 28px; padding: 0 8px; font-size: 12px; white-space: nowrap; }
+      .vivo-admin { display: none; }
+      .vivo-alterna {
+        position: absolute;
+        top: 8px;
+        left: 8px;
+        z-index: 620;
+        display: inline-grid;
+        grid-template-columns: auto auto;
+        gap: 2px;
+        width: auto;
+        margin: 0;
+        padding: 2px;
+        background: rgba(255, 255, 255, .94);
+        border-radius: 8px;
+        box-shadow: 0 1px 4px rgba(16, 32, 40, .18);
       }
       .vivo-alterna button {
-        min-height: 44px;
-        border-radius: 10px;
+        min-height: 28px;
+        height: 28px;
+        padding: 0 8px;
+        border-radius: 6px;
         background: #eef3f5;
         color: var(--navy);
+        font-size: 12px;
         font-weight: 800;
       }
       .vivo-alterna button[aria-selected="true"] { background: var(--teal); color: #fff; }
@@ -863,35 +911,133 @@
       .vivo-filtro-movel select { min-height: 44px; width: 100%; font-size: 16px; }
       .vivo-filtros, .vivo-tabela-caixa { display: none; }
       .vivo-lista { display: grid; }
-      body.vivo-rotas .vivo-mapa { display: none; }
       body:not(.vivo-rotas) .vivo-lista,
       body:not(.vivo-rotas) .vivo-filtro-movel,
-      body:not(.vivo-rotas) #vivo-vazio { display: none; }
-      body[data-pagina="vivo"]:not(.vivo-rotas) .vivo-corpo,
-      body[data-pagina="vivo"]:not(.vivo-rotas) .vivo-mapa {
+      body:not(.vivo-rotas) #vivo-vazio,
+      body:not(.vivo-rotas) .vivo-fechar-rotas { display: none; }
+      body[data-pagina="vivo"] .vivo-corpo,
+      body[data-pagina="vivo"] .vivo-mapa {
         flex: 1;
         min-height: 0;
         display: flex;
         flex-direction: column;
+        position: relative;
       }
-      .vivo-legenda-caixa { flex: none; margin: 0 0 6px; }
+      body[data-pagina="vivo"] .vivo-rotas { display: none; }
+      body[data-pagina="vivo"].vivo-rotas .vivo-rotas {
+        display: flex;
+        flex-direction: column;
+        position: absolute;
+        z-index: 640;
+        top: 44px;
+        left: 6px;
+        right: 6px;
+        bottom: 6px;
+        overflow: auto;
+        gap: 6px;
+        padding: 8px;
+        background: rgba(255, 255, 255, .97);
+        border-radius: 12px;
+        box-shadow: 0 8px 28px rgba(16, 32, 40, .22);
+      }
+      .vivo-fechar-rotas, .vivo-fechar-dificil {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 28px;
+        height: 28px;
+        padding: 0 10px;
+        border-radius: 6px;
+        background: #eef3f5;
+        color: var(--navy);
+        font-size: 12px;
+        font-weight: 800;
+      }
+      .vivo-fechar-rotas { align-self: flex-end; position: sticky; top: 0; }
+      .vivo-legenda-caixa {
+        position: absolute;
+        left: 8px;
+        bottom: 8px;
+        z-index: 620;
+        margin: 0;
+        background: rgba(255, 255, 255, .94);
+        border-radius: 8px;
+        box-shadow: 0 1px 4px rgba(16, 32, 40, .18);
+      }
       .vivo-legenda-caixa summary {
-        min-height: 44px;
+        min-height: 28px;
+        height: 28px;
         display: flex;
         align-items: center;
         list-style: none;
+        padding: 0 10px;
+        font-size: 12px;
       }
       .vivo-legenda-caixa summary::-webkit-details-marker { display: none; }
-      .vivo-legenda { flex-wrap: wrap; gap: 6px 10px; font-size: 12px; margin: 0 0 6px; }
+      .vivo-legenda-caixa:not([open]) .vivo-legenda { display: none !important; }
+      .vivo-legenda-caixa[open] .vivo-legenda {
+        position: absolute;
+        left: 0;
+        bottom: calc(100% + 4px);
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px 10px;
+        width: max-content;
+        max-width: min(280px, 78vw);
+        margin: 0;
+        padding: 8px;
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 4px 16px rgba(16, 32, 40, .18);
+        font-size: 12px;
+      }
       .vivo-legenda span { white-space: nowrap; }
-      .vivo-folha { flex: 1; width: 100%; height: auto; min-height: 160px; }
-      .vivo-mapa-acoes { flex: none; }
-      .vivo-mapa-acoes:not(:has(button:not([hidden]))) { display: none; }
+      .vivo-folha { position: absolute; inset: 0; width: 100%; height: 100%; min-height: 0; border-radius: 8px; }
+      .vivo-mapa-acoes {
+        position: absolute;
+        top: 8px;
+        right: 46px;
+        z-index: 620;
+        display: inline-flex;
+        gap: 2px;
+        margin: 0;
+        padding: 2px;
+        background: rgba(255, 255, 255, .94);
+        border-radius: 8px;
+        box-shadow: 0 1px 4px rgba(16, 32, 40, .18);
+      }
+      .txt-longo { display: none; }
+      .txt-curto { display: inline; }
+      .vivo-dificil-painel {
+        position: absolute;
+        left: 8px;
+        right: 8px;
+        bottom: 44px;
+        z-index: 630;
+        max-height: 36%;
+        overflow: auto;
+        margin: 0;
+      }
+      .vivo-dificil-painel .vivo-fechar-dificil { margin-bottom: 4px; }
+      #vivo-mapa-espera { position: absolute; left: 8px; right: 8px; top: 46px; z-index: 610; margin: 0; }
       .rota-movel { gap: 2px; padding: 8px 10px; }
-      .rota-movel .vivo-ir-mapa { width: 100%; }
+      .rota-movel .vivo-ir-mapa { width: 100%; min-height: 36px; }
       .rota-status { text-transform: uppercase; letter-spacing: .4px; font-size: 12px; }
-      .vivo-mapa-acoes button { min-height: 44px; padding: 10px 14px; }
-      .leaflet-control-zoom a { width: 36px; height: 36px; line-height: 36px; font-size: 18px; }
+      .vivo-mapa-acoes button {
+        min-height: 28px;
+        height: 28px;
+        padding: 0 8px;
+        border-radius: 6px;
+        background: #eef3f5;
+        color: var(--navy);
+        font-size: 12px;
+      }
+      .vivo-mapa-acoes button.ativo { background: var(--teal); color: #fff; }
+      #vivo-todas { order: 1; }
+      #vivo-so { order: 2; }
+      .leaflet-top.leaflet-left { top: 44px; }
+      .leaflet-control-zoom a { width: 32px; height: 32px; line-height: 32px; font-size: 16px; }
+      .leaflet-control-layers { border-radius: 8px; }
       .leaflet-popup-content { margin: 10px 12px; }
       .vivo-popup { min-width: 0; max-width: 220px; font-size: 15px; }
       .vivo-popup button { min-height: 44px; width: 100%; margin-top: 6px; }
@@ -965,28 +1111,8 @@
       .mais-separa { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
     }
     @media (max-width: 900px) and (max-height: 520px) {
-      .vivo-marca, .vivo-aviso, .vivo-cards { display: none; }
-      body[data-pagina="vivo"] .topbar { padding: 4px 8px; }
-      .vivo-controles .campo, #turno-vivo button { min-height: 36px; height: 36px; }
-      body[data-pagina="vivo"] #aba-vivo.ativo { gap: 4px; padding: 4px 8px var(--nav-h); }
-      body[data-pagina="vivo"] #aba-vivo > section.card:first-of-type,
-      body[data-pagina="vivo"] #aba-vivo > section.card:last-of-type { padding: 4px 8px; }
-      .vivo-hero { padding: 0; }
-      .vivo-hero strong { font-size: 22px; }
-      .vivo-alterna { margin: 0 0 4px; }
-      .vivo-alterna button { min-height: 36px; }
-      .vivo-mapa { position: relative; }
-      .vivo-legenda-caixa {
-        position: absolute;
-        left: 8px;
-        bottom: 8px;
-        z-index: 500;
-        margin: 0;
-        background: rgba(255, 255, 255, .94);
-        border-radius: 8px;
-      }
-      .vivo-legenda-caixa summary { min-height: 32px; padding: 0 8px; }
-      .vivo-folha { min-height: 0; }
+      .vivo-controles .campo, #turno-vivo button { min-height: 28px; height: 28px; }
+      body[data-pagina="vivo"] #aba-vivo.ativo { gap: 2px; padding: 2px 6px var(--nav-h); }
       #vivo-detalhe:not([hidden]) { max-height: min(58dvh, 220px); }
     }
     @media (min-width: 901px) {
@@ -1170,6 +1296,7 @@
 
   <main id="aba-vivo" class="painel ativo">
     <section class="card">
+      <p id="vivo-faixa" class="vivo-faixa">Carregando...</p>
       <div class="vivo-cabeca">
         <p class="vivo-marca"><strong>SAGTrack</strong><span>Conclusão de Rotas</span></p>
         <p id="vivo-fase" class="vivo-fase" hidden></p>
@@ -1191,10 +1318,11 @@
           <div id="vivo-folha" class="vivo-folha" role="application" aria-label="Mapa das rotas"></div>
           <p id="vivo-mapa-espera" class="vivo-espera">Carregando o mapa...</p>
           <div class="vivo-mapa-acoes">
-            <button type="button" id="vivo-so" hidden>Ver somente esta rota</button>
-            <button type="button" id="vivo-todas" hidden>Mostrar todas</button>
+            <button type="button" id="vivo-so" hidden><span class="txt-longo">Ver somente esta rota</span><span class="txt-curto">Somente</span></button>
+            <button type="button" id="vivo-todas" hidden><span class="txt-longo">Mostrar todas</span><span class="txt-curto">Todas</span></button>
           </div>
           <div id="vivo-dificil-painel" class="vivo-dificil-painel" hidden>
+            <button type="button" class="vivo-fechar-dificil" id="vivo-fechar-dificil">Fechar</button>
             <ul id="vivo-dificil-lista"></ul>
           </div>
           <details class="vivo-legenda-caixa">
@@ -1214,6 +1342,7 @@
           </details>
         </div>
         <div class="vivo-rotas">
+          <button type="button" class="vivo-fechar-rotas" id="vivo-fechar-rotas">Fechar</button>
           <label class="vivo-filtro-movel" for="vivo-filtro-movel">Filtrar
             <select id="vivo-filtro-movel" aria-label="Filtrar rotas">
               <option value="todas">Todas</option>
@@ -3074,7 +3203,28 @@
       return dia + " — " + nomeTurnoCurto();
     }
 
+    function pintarFaixaVivo(estado, falhaRede) {
+      const el = $("vivo-faixa");
+      if (!el) return;
+      const r = (estado && estado.resumo) || null;
+      const hora = horaCurta((estado && estado.atualizado_hora) || "");
+      if (falhaRede) {
+        el.textContent = hora && hora !== "—" ? "Falha na atualização · " + hora : "Falha na atualização";
+        return;
+      }
+      if (!estado || estado.vazio || !r) {
+        el.textContent = estado && estado.vazio ? "Sem dados deste turno" : "Carregando...";
+        return;
+      }
+      const sit = estado.situacao || "";
+      const prefixo = sit === "FINALIZANDO" ? "Finalizando · " : sit === "ENCERRADO" ? "Encerrado · " : "";
+      const pct = r.percentual_geral ?? 0;
+      const n = r.previstas ?? ((estado.rotas || []).length);
+      el.textContent = prefixo + pct + "% execução • " + n + " rotas • atualizado " + (hora && hora !== "—" ? hora : "—");
+    }
+
     function pintarAvisoVivo(estado, falhaRede) {
+      pintarFaixaVivo(estado, falhaRede);
       const el = $("vivo-aviso");
       if (!el) return;
       el.className = "vivo-aviso";
@@ -3378,7 +3528,49 @@
     function htmlPopup(codigo) {
       const r = rotaVivo(codigo) || { codigo };
       const pct = (Number(r.percentual) || 0).toFixed(0) + "%";
-      return `<div class="vivo-popup"><strong>${escaparVivo(r.codigo || codigo)}</strong><div>${escaparVivo(r.status || "—")} · ${pct}</div><div>${escaparVivo(r.veiculo || "—")}</div><div>${escaparVivo(r.placa || "—")}</div><div>Último GPS ${escaparVivo(r.ultimo_gps || "—")}</div><button type="button" class="vivo-abrir-ficha" data-codigo="${escaparVivo(codigo)}">Detalhes</button></div>`;
+      const codigoTxt = escaparVivo(r.codigo || codigo);
+      const statusTxt = escaparVivo(r.status || "—");
+      if (telaEstreita()) {
+        return `<div class="vivo-popup"><strong>${codigoTxt}</strong><div>${pct}</div><div>${statusTxt}</div></div>`;
+      }
+      return `<div class="vivo-popup"><strong>${codigoTxt}</strong><div>${statusTxt} · ${pct}</div><div>${escaparVivo(r.veiculo || "—")}</div><div>${escaparVivo(r.placa || "—")}</div><div>Último GPS ${escaparVivo(r.ultimo_gps || "—")}</div><button type="button" class="vivo-abrir-ficha" data-codigo="${codigoTxt}">Detalhes</button></div>`;
+    }
+
+    function idadeGps(item) {
+      if (!item) return "—";
+      if (item.gps_ha) return String(item.gps_ha);
+      const bruto = item.ultimo_gps;
+      if (!bruto) return "—";
+      const ms = Date.parse(String(bruto).replace(" ", "T"));
+      if (!Number.isFinite(ms)) return horaCurta(bruto);
+      const min = Math.max(0, Math.round((Date.now() - ms) / 60000));
+      if (min < 1) return "agora";
+      if (min < 60) return "há " + min + " min";
+      const horas = Math.floor(min / 60);
+      const resto = min % 60;
+      return "há " + horas + " h" + (resto ? " " + resto + " min" : "");
+    }
+
+    function situacaoVeiculo(pos) {
+      if (!pos) return "—";
+      if (pos.situacao) return String(pos.situacao);
+      if (pos.rotulo_rota) return String(pos.rotulo_rota);
+      if (pos.deslocamento) return "Deslocamento";
+      if (gpsEstaVelho(pos)) return "GPS desatualizado";
+      return rotuloTelemetria(pos.telemetria) || "Posição atual";
+    }
+
+    function htmlPopupVeiculo(pos) {
+      const nome = (pos && (pos.veiculo || pos.codigo)) || "Veículo";
+      return `<div class="vivo-popup"><strong>${escaparVivo(nome)}</strong><div>Placa ${escaparVivo((pos && pos.placa) || "—")}</div><div>${escaparVivo(situacaoVeiculo(pos))}</div><div>GPS ${escaparVivo(idadeGps(pos))}</div></div>`;
+    }
+
+    function ligarPopupVeiculo(marca, pos) {
+      if (!marca || !telaEstreita()) return;
+      const html = htmlPopupVeiculo(pos);
+      if (marca.getPopup()) marca.setPopupContent(html);
+      else marca.bindPopup(html, { autoPan: true, closeButton: true });
+      if (marca.getTooltip()) marca.unbindTooltip();
     }
 
     function garantirMapaVivo() {
@@ -3414,12 +3606,34 @@
       vivoMapa.on("overlayadd overlayremove", (ev) => {
         if (ev.layer !== vivoGrupoDificil) return;
         const painel = $("vivo-dificil-painel");
-        if (painel) painel.hidden = ev.type === "overlayremove";
+        const lista = $("vivo-dificil-lista");
+        if (!painel) return;
+        const vazio = !lista || lista.children.length === 0;
+        painel.hidden = ev.type === "overlayremove" || (telaEstreita() && vazio);
       });
       setTimeout(() => vivoMapa && vivoMapa.invalidateSize(), 50);
+      if (!folha.__vivoObs && window.ResizeObserver) {
+        let vivoQuadro = 0;
+        folha.__vivoObs = new ResizeObserver(() => {
+          if (vivoQuadro) return;
+          vivoQuadro = requestAnimationFrame(() => {
+            vivoQuadro = 0;
+            if (vivoMapa) vivoMapa.invalidateSize();
+          });
+        });
+        folha.__vivoObs.observe(folha);
+      }
       if (!window.__vivoResize) {
         window.__vivoResize = true;
         window.addEventListener("resize", () => { if (vivoMapa) vivoMapa.invalidateSize(); });
+      }
+      if (!vivoMapa.__vivoFechaLegenda) {
+        vivoMapa.__vivoFechaLegenda = true;
+        vivoMapa.on("click", () => {
+          if (!telaEstreita()) return;
+          const caixa = document.querySelector(".vivo-legenda-caixa");
+          if (caixa) caixa.open = false;
+        });
       }
       return vivoMapa;
     }
@@ -3436,6 +3650,7 @@
         if (layer.getPopup()) layer.setPopupContent(htmlPopup(codigo));
       });
       trazerPoligono(vivoCamadas[vivoFoco || vivoCodigo]);
+      Object.values(vivoPosicao).forEach((marca) => marca.bringToFront && marca.bringToFront());
       const folha = $("vivo-folha");
       if (folha) {
         folha.dataset.selecionada = vivoCodigo || "";
@@ -3496,14 +3711,17 @@
           marca._vivoChave = chavePos;
           marca.setLatLng([pos.lat, pos.lon]);
           marca.setStyle(estilo);
-          marca.setTooltipContent(texto);
+          if (marca.getTooltip()) marca.setTooltipContent(texto);
+          ligarPopupVeiculo(marca, pos);
         } else {
           const criado = L.circleMarker([pos.lat, pos.lon], estilo).bindTooltip(texto, { permanent: false }).addTo(vivoGrupoPos);
           criado._vivoChave = chavePos;
+          ligarPopupVeiculo(criado, pos);
           vivoPosicao[pos.placa] = criado;
         }
       });
       desenharPontaAoVivo();
+      Object.values(vivoPosicao).forEach((marca) => marca.bringToFront && marca.bringToFront());
       Object.keys(vivoPosicao).forEach((placa) => {
         if (vistos.has(placa)) return;
         const marca = vivoPosicao[placa];
@@ -3606,7 +3824,7 @@
           const codigo = (feat.properties && feat.properties.codigo) || feat.id;
           vivoCamadas[codigo] = layer;
           layer.bindPopup(htmlPopup(codigo), { autoPan: false });
-          layer.on("click", () => {
+          layer.on("click", (ev) => {
             if (vivoFoco && vivoFoco !== codigo) vivoFoco = "";
             vivoCodigo = codigo;
             pintarTabelaVivo();
@@ -3616,6 +3834,8 @@
               pintarDetalheVivo(rotaVivo(codigo));
               const tr = document.querySelector('#vivo-linhas tr[data-codigo="' + codigo + '"]');
               if (tr) tr.scrollIntoView({ block: "nearest" });
+            } else if (ev && ev.target && ev.target.openPopup) {
+              ev.target.openPopup();
             }
             atualizarBotoesMapa();
           });
@@ -3715,7 +3935,11 @@
           return `<li data-codigo="${escaparVivo(veiculo.codigo)}" data-situacao="${escaparVivo(sit)}"><b>${escaparVivo(veiculo.codigo)}</b> — ${escaparVivo(sit)}${escaparVivo(gps)}</li>`;
         }).join("");
       }
-      if (painel) painel.hidden = !(vivoMapa && vivoMapa.hasLayer(vivoGrupoDificil));
+      if (painel) {
+        const ligado = !!(vivoMapa && vivoMapa.hasLayer(vivoGrupoDificil));
+        const itens = (pacote.veiculos || []).length;
+        painel.hidden = telaEstreita() ? !(ligado && itens) : !ligado;
+      }
       (pacote.veiculos || []).forEach((veiculo) => {
         const nome = (veiculo.codigo || "") + " · " + (veiculo.placa || "");
         ["na_rota", "deslocamento", "dificil"].forEach((tipo) => {
@@ -3737,7 +3961,8 @@
         if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
         const cor = coresMarca[veiculo.situacao] || "#6d7c86";
         const texto = nome + " · " + (veiculo.situacao || "") + (veiculo.ultimo_gps ? " · GPS " + horaCurta(veiculo.ultimo_gps) : "");
-        L.circleMarker([lat, lon], { radius: 8, color: "#102028", weight: 2, fillColor: cor, fillOpacity: 1 }).bindTooltip(texto).addTo(vivoGrupoDificil);
+        const marca = L.circleMarker([lat, lon], { radius: 8, color: "#102028", weight: 2, fillColor: cor, fillOpacity: 1 }).bindTooltip(texto).addTo(vivoGrupoDificil);
+        ligarPopupVeiculo(marca, veiculo);
       });
       const folha = $("vivo-folha");
       const resumo = (pacote && pacote.resumo) || {};
@@ -3867,8 +4092,22 @@
     function atualizarBotoesMapa() {
       const so = $("vivo-so");
       const todas = $("vivo-todas");
-      if (so) so.hidden = !vivoCodigo;
-      if (todas) todas.hidden = !vivoFoco;
+      if (!so || !todas) return;
+      if (telaEstreita()) {
+        so.hidden = false;
+        todas.hidden = false;
+        so.disabled = !vivoCodigo;
+        so.classList.toggle("ativo", Boolean(vivoFoco));
+        todas.classList.toggle("ativo", !vivoFoco);
+        so.setAttribute("aria-pressed", vivoFoco ? "true" : "false");
+        todas.setAttribute("aria-pressed", vivoFoco ? "false" : "true");
+        return;
+      }
+      so.hidden = !vivoCodigo;
+      todas.hidden = !vivoFoco;
+      so.disabled = false;
+      so.classList.remove("ativo");
+      todas.classList.remove("ativo");
     }
 
     function focarMapaVivo(codigo) {
@@ -4089,6 +4328,22 @@
     if (btnSo) btnSo.addEventListener("click", () => isolarGeometria(vivoCodigo));
     const btnTodas = $("vivo-todas");
     if (btnTodas) btnTodas.addEventListener("click", () => mostrarTodasRotas());
+    const fecharRotas = $("vivo-fechar-rotas");
+    if (fecharRotas) {
+      fecharRotas.addEventListener("click", () => {
+        document.body.classList.remove("vivo-rotas");
+        atualizarVistaVivo();
+        requestAnimationFrame(() => vivoMapa && vivoMapa.invalidateSize());
+      });
+    }
+    const fecharDificil = $("vivo-fechar-dificil");
+    if (fecharDificil) {
+      fecharDificil.addEventListener("click", () => {
+        const painel = $("vivo-dificil-painel");
+        if (painel) painel.hidden = true;
+      });
+    }
+    atualizarBotoesMapa();
     function irParaMapa(codigo) {
       vivoCodigo = codigo || vivoCodigo;
       vivoFichaAberta = false;
