@@ -1008,17 +1008,7 @@
       }
       .txt-longo { display: none; }
       .txt-curto { display: inline; }
-      .vivo-dificil-painel {
-        position: absolute;
-        left: 8px;
-        right: 8px;
-        bottom: 44px;
-        z-index: 630;
-        max-height: 36%;
-        overflow: auto;
-        margin: 0;
-      }
-      .vivo-dificil-painel .vivo-fechar-dificil { margin-bottom: 4px; }
+      #vivo-dificil-painel { display: none !important; }
       #vivo-mapa-espera { position: absolute; left: 8px; right: 8px; top: 46px; z-index: 610; margin: 0; }
       .rota-movel { gap: 2px; padding: 8px 10px; }
       .rota-movel .vivo-ir-mapa { width: 100%; min-height: 36px; }
@@ -3606,10 +3596,8 @@
       vivoMapa.on("overlayadd overlayremove", (ev) => {
         if (ev.layer !== vivoGrupoDificil) return;
         const painel = $("vivo-dificil-painel");
-        const lista = $("vivo-dificil-lista");
         if (!painel) return;
-        const vazio = !lista || lista.children.length === 0;
-        painel.hidden = ev.type === "overlayremove" || (telaEstreita() && vazio);
+        painel.hidden = telaEstreita() || ev.type === "overlayremove";
       });
       setTimeout(() => vivoMapa && vivoMapa.invalidateSize(), 50);
       if (!folha.__vivoObs && window.ResizeObserver) {
@@ -3937,8 +3925,7 @@
       }
       if (painel) {
         const ligado = !!(vivoMapa && vivoMapa.hasLayer(vivoGrupoDificil));
-        const itens = (pacote.veiculos || []).length;
-        painel.hidden = telaEstreita() ? !(ligado && itens) : !ligado;
+        painel.hidden = telaEstreita() || !ligado;
       }
       (pacote.veiculos || []).forEach((veiculo) => {
         const nome = (veiculo.codigo || "") + " · " + (veiculo.placa || "");
