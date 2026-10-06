@@ -1205,6 +1205,10 @@
               <span><i style="background:#b7c3c9"></i>Não iniciada</span>
               <span><i style="background:#5b4b8a"></i>Apoio</span>
               <span><i style="background:#e07a00"></i>Difícil acesso</span>
+              <span><i style="background:#f2c14e;border-radius:50%"></i>Pino = posição atual</span>
+              <span><i style="background:#17324d"></i>Trilha = GPS persistido</span>
+              <span><i style="background:#c9a227"></i>Ponta ao vivo</span>
+              <span><i style="background:#8aa0ab;border-radius:50%"></i>GPS desatualizado</span>
               <span><i style="background:#6d7c86"></i>Deslocamento</span>
             </p>
           </details>
@@ -3439,13 +3443,42 @@
       }
     }
 
+    function gpsEstaVelho(pos) {
+      if (!pos) return true;
+      if (pos.gps_desatualizado) return true;
+      const tel = pos.telemetria || "";
+      if (tel === "atrasado" || tel === "sem_dados" || tel === "sem_comunicacao") return true;
+      return !(pos.posicao_em || pos.ultimo_gps);
+    }
+
+    function textoGps(pos) {
+      if (gpsEstaVelho(pos)) {
+        return ["GPS desatualizado", pos.gps_ha || ""].filter(Boolean).join(" · ");
+      }
+      return ["Posição atual", pos.gps_ha || ""].filter(Boolean).join(" · ");
+    }
+
     function lugarVeiculo(placa) {
       const pos = ((vivoEstado && vivoEstado.posicoes) || []).find((item) => item.placa === placa);
       if (!pos) return "";
       const partes = [];
       if (pos.rotulo_rota) partes.push("Rota: " + pos.rotulo_rota);
-      if (pos.gps_ha) partes.push("GPS " + pos.gps_ha);
+      partes.push(textoGps(pos));
       return partes.join(" · ");
+    }
+
+    function estiloPino(pos) {
+      if (gpsEstaVelho(pos)) {
+        return { radius: 7, color: "#5d6b73", weight: 2, fillColor: "#d5dde2", fillOpacity: 0.95, dashArray: "2 3" };
+      }
+      const fora = !!pos.deslocamento;
+      return {
+        radius: 7,
+        color: "#102028",
+        weight: 2,
+        fillColor: fora ? "#6d7c86" : "#f2c14e",
+        fillOpacity: 1,
+      };
     }
 
     function desenharPosicoes() {
@@ -3455,16 +3488,9 @@
         if (pos.lat == null || pos.lon == null) return;
         vistos.add(pos.placa);
         const marca = vivoPosicao[pos.placa];
-        const fora = !!pos.deslocamento;
-        const texto = [pos.placa || "", pos.rotulo_rota || "", pos.gps_ha ? "GPS " + pos.gps_ha : ""].filter(Boolean).join(" · ");
-        const estilo = {
-          radius: 7,
-          color: "#102028",
-          weight: 2,
-          fillColor: fora ? "#6d7c86" : "#f2c14e",
-          fillOpacity: 1,
-        };
-        const chavePos = pos.lat + "," + pos.lon + "|" + (pos.rotulo_rota || "") + "|" + (pos.gps_ha || "");
+        const texto = [pos.placa || "", pos.rotulo_rota || "", textoGps(pos)].filter(Boolean).join(" · ");
+        const estilo = estiloPino(pos);
+        const chavePos = pos.lat + "," + pos.lon + "|" + (pos.rotulo_rota || "") + "|" + texto;
         if (marca && marca._vivoChave === chavePos) return;
         if (marca) {
           marca._vivoChave = chavePos;
@@ -3477,6 +3503,7 @@
           vivoPosicao[pos.placa] = criado;
         }
       });
+      desenharPontaAoVivo();
       Object.keys(vivoPosicao).forEach((placa) => {
         if (vistos.has(placa)) return;
         const marca = vivoPosicao[placa];
@@ -3497,8 +3524,77 @@
         : { color: "#17324d", weight: 3, opacity: 0.85 };
       if (linha) linha.addLatLng(latlng);
       else grupo[ponto.placa] = L.polyline([latlng], estilo).addTo(vivoGrupoTrilha);
-      const marca = vivoPosicao[ponto.placa];
-      if (marca) marca.setLatLng(latlng);
+    }
+
+    let vivoPonta = [];
+
+    function instanteGps(texto) {
+      const bruto = String(texto || "").trim().replace("Z", "").slice(0, 19);
+      const achou = bruto.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2}):(\d{2})/);
+      if (!achou) return null;
+      return new Date(+achou[1], +achou[2] - 1, +achou[3], +achou[4], +achou[5], +achou[6]).getTime();
+    }
+
+    function metrosEntre(a, b) {
+      const r = 6371000;
+      const p1 = a[0] * Math.PI / 180;
+      const p2 = b[0] * Math.PI / 180;
+      const dphi = (b[0] - a[0]) * Math.PI / 180;
+      const dl = (b[1] - a[1]) * Math.PI / 180;
+      const h = Math.sin(dphi / 2) ** 2 + Math.cos(p1) * Math.cos(p2) * Math.sin(dl / 2) ** 2;
+      return 2 * r * Math.asin(Math.min(1, Math.sqrt(h)));
+    }
+
+    function fimPersistido(placa, lat, lon) {
+      const candidatos = [vivoTrilha[placa], vivoDesloc[placa]].filter(Boolean);
+      let melhor = null;
+      let perto = Infinity;
+      candidatos.forEach((linha) => {
+        const pts = linha.getLatLngs ? linha.getLatLngs() : [];
+        const ultimo = pts[pts.length - 1];
+        if (!ultimo || ultimo.lat == null) return;
+        const par = [ultimo.lat, ultimo.lng];
+        const dist = metrosEntre(par, [lat, lon]);
+        if (dist < perto) {
+          perto = dist;
+          melhor = par;
+        }
+      });
+      return melhor;
+    }
+
+    function pontaSegura(pos, fim) {
+      if (!fim || pos.lat == null || pos.lon == null) return false;
+      if (gpsEstaVelho(pos)) return false;
+      const dist = metrosEntre(fim, [Number(pos.lat), Number(pos.lon)]);
+      if (dist < 12 || dist >= 1500) return false;
+      const gravado = instanteGps(pos.ultimo_gps);
+      const vivo = instanteGps(pos.posicao_em || pos.ultimo_gps);
+      if (gravado == null || vivo == null) return dist <= 120;
+      const dt = (vivo - gravado) / 1000;
+      if (dt <= 0 || dt > 600) return false;
+      const vel = dist * 3.6 / dt;
+      return vel <= 90;
+    }
+
+    function desenharPontaAoVivo() {
+      vivoPonta.forEach((linha) => {
+        if (vivoGrupoTrilha && vivoGrupoTrilha.hasLayer(linha)) vivoGrupoTrilha.removeLayer(linha);
+      });
+      vivoPonta = [];
+      if (!vivoGrupoTrilha) return;
+      ((vivoEstado && vivoEstado.posicoes) || []).forEach((pos) => {
+        const fim = fimPersistido(pos.placa, Number(pos.lat), Number(pos.lon));
+        if (!pontaSegura(pos, fim)) return;
+        const linha = L.polyline([fim, [Number(pos.lat), Number(pos.lon)]], {
+          color: "#c9a227",
+          weight: 3,
+          opacity: 0.9,
+          dashArray: "2 7",
+        }).bindTooltip((pos.placa || "") + " · ponta ao vivo · ainda não gravada", { sticky: true });
+        linha.addTo(vivoGrupoTrilha);
+        vivoPonta.push(linha);
+      });
     }
 
     function desenharColecao(colecao, t0) {
@@ -3586,6 +3682,7 @@
       });
       vivoCursor = pacote.cursor || "";
       window.vivoTrilha = vivoTrilha;
+      desenharPontaAoVivo();
       const folha = $("vivo-folha");
       if (folha) folha.dataset.cursor = vivoCursor;
     }
@@ -3675,6 +3772,7 @@
         if (ehBasculante(ponto.placa)) bascula = true;
       });
       if (pacote.cursor) vivoCursor = pacote.cursor;
+      desenharPontaAoVivo();
       if (bascula && !vivoDificilPedido) {
         vivoDificilPedido = carregarDificil(data, turno).finally(() => { vivoDificilPedido = null; });
       }
