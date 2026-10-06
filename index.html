@@ -3127,10 +3127,82 @@
     let vivoPausado = false;
     let vivoTimer = 0;
     let vivoMapaUrl = "";
+    let vivoAcompanhar = true;
 
     function turnoVivo() {
       const ativo = document.querySelector("#turno-vivo button.ativo");
       return (ativo && ativo.dataset.turno) || "diurno";
+    }
+
+    /* virada-vivo */
+    function partesBrasilia(agora) {
+      const partes = new Intl.DateTimeFormat("en-US", {
+        timeZone: "America/Sao_Paulo",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        hourCycle: "h23",
+      }).formatToParts(agora);
+      const ler = (tipo) => {
+        const item = partes.find((p) => p.type === tipo);
+        return Number(item && item.value);
+      };
+      let hora = ler("hour");
+      if (hora === 24) hora = 0;
+      return { ano: ler("year"), mes: ler("month"), dia: ler("day"), hora: hora };
+    }
+
+    function isoData(ano, mes, dia) {
+      return String(ano) + "-" + String(mes).padStart(2, "0") + "-" + String(dia).padStart(2, "0");
+    }
+
+    function diaAnterior(ano, mes, dia) {
+      const base = new Date(Date.UTC(ano, mes - 1, dia));
+      base.setUTCDate(base.getUTCDate() - 1);
+      return { ano: base.getUTCFullYear(), mes: base.getUTCMonth() + 1, dia: base.getUTCDate() };
+    }
+
+    function turnoOperacional(agora) {
+      const p = partesBrasilia(agora || new Date());
+      if (p.hora >= 19) return { data: isoData(p.ano, p.mes, p.dia), turno: "noturno" };
+      if (p.hora < 6) {
+        const ant = diaAnterior(p.ano, p.mes, p.dia);
+        return { data: isoData(ant.ano, ant.mes, ant.dia), turno: "noturno" };
+      }
+      return { data: isoData(p.ano, p.mes, p.dia), turno: "diurno" };
+    }
+
+    function decidirViradaAoVivo(atual, agora, acompanhando) {
+      const op = turnoOperacional(agora);
+      if (!acompanhando) return { trocar: false, data: atual.data, turno: atual.turno };
+      const trocar = atual.data !== op.data || atual.turno !== op.turno;
+      return { trocar: trocar, data: op.data, turno: op.turno };
+    }
+    /* /virada-vivo */
+
+    function definirTurnoVivo(turno) {
+      document.querySelectorAll("#turno-vivo button").forEach((b) => {
+        b.classList.toggle("ativo", b.dataset.turno === turno);
+      });
+    }
+
+    function selecaoConfereOperacional(agora) {
+      const op = turnoOperacional(agora || new Date());
+      const campo = $("data-vivo");
+      return !!(campo && campo.value === op.data && turnoVivo() === op.turno);
+    }
+
+    function aplicarTurnoOperacional(agora) {
+      const campo = $("data-vivo");
+      const atual = { data: (campo && campo.value) || "", turno: turnoVivo() };
+      const deciso = decidirViradaAoVivo(atual, agora || new Date(), vivoAcompanhar);
+      if (!deciso.trocar) return false;
+      if (campo) campo.value = deciso.data;
+      definirTurnoVivo(deciso.turno);
+      vivoCodigo = "";
+      vivoFoco = "";
+      return true;
     }
 
     function horaAgora() {
@@ -3148,15 +3220,8 @@
 
     function iniciarVivo() {
       const campo = $("data-vivo");
-      if (campo && !campo.value) {
-        const agora = new Date();
-        const mes = String(agora.getMonth() + 1).padStart(2, "0");
-        const dia = String(agora.getDate()).padStart(2, "0");
-        campo.value = agora.getFullYear() + "-" + mes + "-" + dia;
-        const hora = agora.getHours();
-        const noturno = hora >= 19 || hora < 6;
-        document.querySelectorAll("#turno-vivo button").forEach((b) => b.classList.toggle("ativo", b.dataset.turno === (noturno ? "noturno" : "diurno")));
-      }
+      if (campo && !campo.value) vivoAcompanhar = true;
+      aplicarTurnoOperacional();
       lerVivo();
       pararRelogioVivo();
       if (!vivoPausado) vivoTimer = setInterval(() => lerVivo(), VIVO_LEITURA_MS);
@@ -4184,7 +4249,8 @@
 
     async function lerVivo() {
       if (vivoPedido) return;
-      if (mesmoTurnoNaTela() && semAtualizacaoTela(vivoEstado)) return;
+      const virou = aplicarTurnoOperacional();
+      if (!virou && mesmoTurnoNaTela() && semAtualizacaoTela(vivoEstado)) return;
       vivoPedido = true;
       const data = ($("data-vivo") && $("data-vivo").value) || "";
       const turno = turnoVivo();
@@ -4209,6 +4275,7 @@
         const btn = ev.target.closest("button[data-turno]");
         if (!btn) return;
         turnoBox.querySelectorAll("button").forEach((el) => el.classList.toggle("ativo", el === btn));
+        vivoAcompanhar = selecaoConfereOperacional();
         vivoCodigo = "";
         vivoFoco = "";
         lerVivo();
@@ -4217,6 +4284,7 @@
     const dataVivo = $("data-vivo");
     if (dataVivo) {
       dataVivo.addEventListener("change", () => {
+        vivoAcompanhar = selecaoConfereOperacional();
         vivoCodigo = "";
         vivoFoco = "";
         lerVivo();
