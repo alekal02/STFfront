@@ -2986,7 +2986,7 @@
     agendarStatus(2500);
     carregarChatbot();
 
-    const VIVO_LEITURA_MS = 30000;
+    const VIVO_LEITURA_MS = 10000;
     let vivoEstado = null;
     let vivoGrupo = "todas";
     let vivoOrdem = { campo: "codigo", dir: 1 };
@@ -3320,6 +3320,8 @@
     let vivoGrupoFeitos = null;
     let vivoGrupoFalta = null;
     let vivoChaveMapa = "";
+    let vivoAssinatura = "";
+    let vivoTrilhaPedido = null;
     let vivoEtag = "";
     let vivoEtags = {};
     let vivoGeoCache = {};
@@ -3443,12 +3445,17 @@
           fillColor: fora ? "#6d7c86" : "#f2c14e",
           fillOpacity: 1,
         };
+        const chavePos = pos.lat + "," + pos.lon + "|" + (pos.rotulo_rota || "") + "|" + (pos.gps_ha || "");
+        if (marca && marca._vivoChave === chavePos) return;
         if (marca) {
+          marca._vivoChave = chavePos;
           marca.setLatLng([pos.lat, pos.lon]);
           marca.setStyle(estilo);
           marca.setTooltipContent(texto);
         } else {
-          vivoPosicao[pos.placa] = L.circleMarker([pos.lat, pos.lon], estilo).bindTooltip(texto, { permanent: false }).addTo(vivoGrupoPos);
+          const criado = L.circleMarker([pos.lat, pos.lon], estilo).bindTooltip(texto, { permanent: false }).addTo(vivoGrupoPos);
+          criado._vivoChave = chavePos;
+          vivoPosicao[pos.placa] = criado;
         }
       });
       Object.keys(vivoPosicao).forEach((placa) => {
@@ -3687,6 +3694,7 @@
 
     async function sincronizarMapaVivo(estado) {
       if (!estado || !garantirMapaVivo()) return;
+      desenharPosicoes();
       const data = estado.data || (($("data-vivo") && $("data-vivo").value) || "");
       const turno = estado.turno || turnoVivo();
       const chave = data + "|" + turno;
@@ -3696,16 +3704,18 @@
         vivoFoco = "";
         limparDetalheRota();
         await carregarGeometria(data, turno);
-        await carregarTrilhas(data, turno);
+        if (!vivoTrilhaPedido) vivoTrilhaPedido = carregarTrilhas(data, turno).finally(() => { vivoTrilhaPedido = null; });
       } else if (!turnoEncerrado(estado)) {
-        atualizarEstiloRotas();
-        await atualizarTrilhas(data, turno);
-      } else {
+        if (vivoCursor) await atualizarTrilhas(data, turno);
+        else if (!vivoTrilhaPedido) vivoTrilhaPedido = carregarTrilhas(data, turno).finally(() => { vivoTrilhaPedido = null; });
+      }
+      const assinatura = ((estado.rotas) || []).map((rota) => (rota.codigo || "") + ":" + (rota.grupo || "")).join(",");
+      if (assinatura !== vivoAssinatura) {
+        vivoAssinatura = assinatura;
         atualizarEstiloRotas();
       }
       desenharPosicoes();
       atualizarBotoesMapa();
-      if (vivoMapa) vivoMapa.invalidateSize();
     }
 
     function aplicarEstadoVivo(estado) {
