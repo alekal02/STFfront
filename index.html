@@ -639,6 +639,10 @@
     .vivo-popup b { display: inline-block; min-width: 78px; }
     .leaflet-control-layers-expanded { font-size: 12px; line-height: 1.35; }
     .vivo-legenda { display: flex; flex-wrap: wrap; gap: 10px; margin: 8px 0 0; color: var(--muted); font-size: 12px; }
+    .vivo-dificil-painel { margin: 0 0 6px; padding: 6px 8px; border: 1px solid #d5dee3; border-radius: 8px; background: #fff; font-size: 13px; line-height: 1.35; }
+    .vivo-dificil-painel ul { margin: 0; padding: 0; }
+    .vivo-dificil-painel li { list-style: none; }
+    .vivo-dificil-painel[hidden] { display: none; }
     .vivo-legenda i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; }
     .vivo-filtros { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
     .vivo-filtros button { background: #eef3f5; color: var(--navy); }
@@ -1190,6 +1194,9 @@
             <button type="button" id="vivo-so" hidden>Ver somente esta rota</button>
             <button type="button" id="vivo-todas" hidden>Mostrar todas</button>
           </div>
+          <div id="vivo-dificil-painel" class="vivo-dificil-painel" hidden>
+            <ul id="vivo-dificil-lista"></ul>
+          </div>
           <details class="vivo-legenda-caixa">
             <summary>Legenda</summary>
             <p class="vivo-legenda">
@@ -1197,6 +1204,8 @@
               <span><i style="background:#c56a1a"></i>Parcial</span>
               <span><i style="background:#b7c3c9"></i>Não iniciada</span>
               <span><i style="background:#5b4b8a"></i>Apoio</span>
+              <span><i style="background:#e07a00"></i>Difícil acesso</span>
+              <span><i style="background:#6d7c86"></i>Deslocamento</span>
             </p>
           </details>
         </div>
@@ -3314,6 +3323,7 @@
     let vivoPosicao = {};
     let vivoGrupoRotas = null;
     let vivoGrupoTrilha = null;
+    let vivoGrupoDificil = null;
     let vivoGrupoPos = null;
     let vivoGrupoEnt = null;
     let vivoGrupoSai = null;
@@ -3322,6 +3332,7 @@
     let vivoChaveMapa = "";
     let vivoAssinatura = "";
     let vivoTrilhaPedido = null;
+    let vivoDificilPedido = null;
     let vivoEtag = "";
     let vivoEtags = {};
     let vivoGeoCache = {};
@@ -3378,6 +3389,7 @@
       }).addTo(vivoMapa);
       vivoGrupoRotas = L.featureGroup().addTo(vivoMapa);
       vivoGrupoTrilha = L.layerGroup().addTo(vivoMapa);
+      vivoGrupoDificil = L.layerGroup().addTo(vivoMapa);
       vivoGrupoPos = L.layerGroup().addTo(vivoMapa);
       vivoGrupoEnt = L.layerGroup();
       vivoGrupoSai = L.layerGroup();
@@ -3386,6 +3398,7 @@
       L.control.layers(null, {
         "Rotas oficiais": vivoGrupoRotas,
         "Trajetória GPS": vivoGrupoTrilha,
+        "Difícil acesso": vivoGrupoDificil,
         "Posição atual": vivoGrupoPos,
         "Entrada": vivoGrupoEnt,
         "Saída": vivoGrupoSai,
@@ -3393,6 +3406,12 @@
         "Trechos faltantes": vivoGrupoFalta,
       }, { collapsed: estreito }).addTo(vivoMapa);
       window.vivoMapa = vivoMapa;
+      window.vivoGrupoDificil = vivoGrupoDificil;
+      vivoMapa.on("overlayadd overlayremove", (ev) => {
+        if (ev.layer !== vivoGrupoDificil) return;
+        const painel = $("vivo-dificil-painel");
+        if (painel) painel.hidden = ev.type === "overlayremove";
+      });
       setTimeout(() => vivoMapa && vivoMapa.invalidateSize(), 50);
       if (!window.__vivoResize) {
         window.__vivoResize = true;
@@ -3571,13 +3590,94 @@
       if (folha) folha.dataset.cursor = vivoCursor;
     }
 
+    function ehBasculante(placa) {
+      const chave = String(placa || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+      return chave === "SCN4B49" || chave === "SCN1G89" || chave.indexOf("CBT018") >= 0 || chave.indexOf("CBT012") >= 0;
+    }
+
+    function desenharDificil(pacote) {
+      if (!vivoGrupoDificil) return;
+      vivoGrupoDificil.clearLayers();
+      const estilos = {
+        na_rota: { color: "#17324d", weight: 2, opacity: 0.35 },
+        deslocamento: { color: "#6d7c86", weight: 2, opacity: 0.75, dashArray: "4 6" },
+        dificil: { color: "#e07a00", weight: 5, opacity: 0.95 },
+      };
+      const rotulos = {
+        na_rota: "na rota oficial",
+        deslocamento: "deslocamento",
+        dificil: "difícil acesso",
+      };
+      const coresMarca = { "Difícil acesso": "#e07a00", "Deslocamento": "#6d7c86", "Na rota": "#17324d" };
+      const lista = $("vivo-dificil-lista");
+      const painel = $("vivo-dificil-painel");
+      if (lista) {
+        lista.innerHTML = (pacote.veiculos || []).map((veiculo) => {
+          const sit = veiculo.situacao || "Sem rastreamento";
+          const gps = veiculo.ultimo_gps && sit !== "Sem rastreamento" ? " · GPS " + horaCurta(veiculo.ultimo_gps) : "";
+          return `<li data-codigo="${escaparVivo(veiculo.codigo)}" data-situacao="${escaparVivo(sit)}"><b>${escaparVivo(veiculo.codigo)}</b> — ${escaparVivo(sit)}${escaparVivo(gps)}</li>`;
+        }).join("");
+      }
+      if (painel) painel.hidden = !(vivoMapa && vivoMapa.hasLayer(vivoGrupoDificil));
+      (pacote.veiculos || []).forEach((veiculo) => {
+        const nome = (veiculo.codigo || "") + " · " + (veiculo.placa || "");
+        ["na_rota", "deslocamento", "dificil"].forEach((tipo) => {
+          (veiculo[tipo] || []).forEach((linha) => {
+            const pontos = [];
+            (linha || []).forEach((par) => {
+              if (!par || par.length < 2 || par[0] == null || par[1] == null) return;
+              const lat = Number(par[0]);
+              const lon = Number(par[1]);
+              if (Number.isFinite(lat) && Number.isFinite(lon)) pontos.push([lat, lon]);
+            });
+            if (pontos.length < 2) return;
+            L.polyline(pontos, estilos[tipo]).bindTooltip(nome + " · " + rotulos[tipo], { sticky: true }).addTo(vivoGrupoDificil);
+          });
+        });
+        if (veiculo.lat == null || veiculo.lon == null || (veiculo.situacao || "") === "Sem rastreamento") return;
+        const lat = Number(veiculo.lat);
+        const lon = Number(veiculo.lon);
+        if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
+        const cor = coresMarca[veiculo.situacao] || "#6d7c86";
+        const texto = nome + " · " + (veiculo.situacao || "") + (veiculo.ultimo_gps ? " · GPS " + horaCurta(veiculo.ultimo_gps) : "");
+        L.circleMarker([lat, lon], { radius: 8, color: "#102028", weight: 2, fillColor: cor, fillOpacity: 1 }).bindTooltip(texto).addTo(vivoGrupoDificil);
+      });
+      const folha = $("vivo-folha");
+      const resumo = (pacote && pacote.resumo) || {};
+      if (folha) {
+        folha.dataset.dificil = String(resumo.trechos_dificil || 0);
+        folha.dataset.dificilFora = String((resumo.trechos_dificil || 0) + (resumo.trechos_deslocamento || 0));
+        folha.dataset.dificilPulsos = String(resumo.pulsos || 0);
+        folha.dataset.dificilMs = String(resumo.ms || 0);
+      }
+      window.vivoDificil = pacote;
+    }
+
+    async function carregarDificil(data, turno) {
+      if (!vivoGrupoDificil) return;
+      try {
+        const resp = await fetch("/api/live-report/dificil-acesso?data=" + encodeURIComponent(data) + "&turno=" + encodeURIComponent(turno), { cache: "no-store" });
+        if (!resp.ok) return;
+        desenharDificil(await resp.json());
+      } catch (e) {
+        return;
+      }
+    }
+
     async function atualizarTrilhas(data, turno) {
       if (!vivoCursor) return;
       const resp = await fetch("/api/live-report/track-updates?data=" + encodeURIComponent(data) + "&turno=" + encodeURIComponent(turno) + "&since=" + encodeURIComponent(vivoCursor), { cache: "no-store" });
       if (!resp.ok) return;
       const pacote = await resp.json();
-      (pacote.pontos || []).forEach(acrescentarPonto);
+      let bascula = false;
+      (pacote.pontos || []).forEach((ponto) => {
+        acrescentarPonto(ponto);
+        if (ehBasculante(ponto.placa)) bascula = true;
+      });
       if (pacote.cursor) vivoCursor = pacote.cursor;
+      if (bascula && !vivoDificilPedido) {
+        vivoDificilPedido = carregarDificil(data, turno).finally(() => { vivoDificilPedido = null; });
+      }
     }
 
     function limparDetalheRota() {
@@ -3703,11 +3803,14 @@
         vivoCursor = "";
         vivoFoco = "";
         limparDetalheRota();
-        await carregarGeometria(data, turno);
+        const geometria = carregarGeometria(data, turno);
         if (!vivoTrilhaPedido) vivoTrilhaPedido = carregarTrilhas(data, turno).finally(() => { vivoTrilhaPedido = null; });
+        if (!vivoDificilPedido) vivoDificilPedido = carregarDificil(data, turno).finally(() => { vivoDificilPedido = null; });
+        await geometria;
       } else if (!turnoEncerrado(estado)) {
         if (vivoCursor) await atualizarTrilhas(data, turno);
         else if (!vivoTrilhaPedido) vivoTrilhaPedido = carregarTrilhas(data, turno).finally(() => { vivoTrilhaPedido = null; });
+        if (!vivoDificilPedido) vivoDificilPedido = carregarDificil(data, turno).finally(() => { vivoDificilPedido = null; });
       }
       const assinatura = ((estado.rotas) || []).map((rota) => (rota.codigo || "") + ":" + (rota.grupo || "")).join(",");
       if (assinatura !== vivoAssinatura) {
