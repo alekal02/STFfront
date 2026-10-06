@@ -615,7 +615,7 @@
     .vivo-fase.aberto { background: #e5f6ee; color: #146b45; }
     .vivo-fase.finalizando { background: #fff4d6; color: #8a6b12; }
     .vivo-fase.encerrado { background: #eceff1; color: #1c2428; }
-    #btn-vivo-agora:disabled, #btn-vivo-pausa:disabled, #btn-vivo-encerrar:disabled { opacity: .45; cursor: not-allowed; }
+    #btn-vivo-pausa:disabled, #btn-vivo-encerrar:disabled { opacity: .45; cursor: not-allowed; }
     .vivo-aviso.ok { color: #1b8a5a; }
     .vivo-aviso.run { color: #8a6b12; }
     .vivo-aviso.err { color: #b34145; }
@@ -699,7 +699,7 @@
     }
     .vivo-esqueleto .sk-hero { height: 72px; }
     @keyframes vivo-pulso { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
-    .vivo-alterna, .vivo-filtro-movel, .vivo-lista, .rotulo-curto { display: none; }
+    .vivo-alterna, .vivo-filtro-movel, .vivo-lista { display: none; }
     .vivo-admin { margin-left: 8px; }
     .vivo-admin summary {
       cursor: pointer;
@@ -762,10 +762,6 @@
     #vivo-apoio { display: none !important; }
     .nav-app, .painel-mais { display: none; }
     :root { --nav-h: calc(56px + env(safe-area-inset-bottom)); }
-    @keyframes vivo-gira { to { transform: rotate(360deg); } }
-    #btn-vivo-agora .vivo-giro { display: inline-block; }
-    #btn-vivo-agora.ocupado .vivo-giro { animation: vivo-gira .8s linear infinite; }
-    #btn-vivo-agora.ocupado { cursor: progress; }
     .vivo-legenda-caixa summary { cursor: pointer; font-weight: 800; }
     @media (min-width: 901px) {
       .vivo-legenda-caixa summary { display: none; }
@@ -831,16 +827,13 @@
       #vivo-apoio { display: none !important; }
       .vivo-controles {
         display: grid;
-        grid-template-columns: minmax(0, 1.15fr) minmax(0, 1.25fr) 44px;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
         gap: 8px;
         width: 100%;
       }
       .vivo-controles .campo { min-width: 0; width: 100%; min-height: 44px; }
       #turno-vivo { display: grid; grid-template-columns: 1fr 1fr; min-width: 0; }
       #turno-vivo button { min-height: 44px; padding: 8px 4px; font-size: 13px; }
-      #btn-vivo-agora { width: 44px; min-width: 44px; height: 44px; padding: 0; font-size: 22px; }
-      .rotulo-largo { display: none; }
-      .rotulo-curto { display: inline; }
       .vivo-admin { display: none; }
       .vivo-hero { padding: 4px 8px; }
       .vivo-hero strong { font-size: 28px; }
@@ -970,7 +963,7 @@
     @media (max-width: 900px) and (max-height: 520px) {
       .vivo-marca, .vivo-aviso, .vivo-cards { display: none; }
       body[data-pagina="vivo"] .topbar { padding: 4px 8px; }
-      .vivo-controles .campo, #turno-vivo button, #btn-vivo-agora { min-height: 36px; height: 36px; }
+      .vivo-controles .campo, #turno-vivo button { min-height: 36px; height: 36px; }
       body[data-pagina="vivo"] #aba-vivo.ativo { gap: 4px; padding: 4px 8px var(--nav-h); }
       body[data-pagina="vivo"] #aba-vivo > section.card:first-of-type,
       body[data-pagina="vivo"] #aba-vivo > section.card:last-of-type { padding: 4px 8px; }
@@ -1076,7 +1069,6 @@
                 <button type="button" class="ativo" data-turno="diurno">Diurno</button>
                 <button type="button" data-turno="noturno">Noturno</button>
               </div>
-              <button type="button" class="principal" id="btn-vivo-agora" aria-label="Atualizar agora" title="Atualizar agora"><span class="vivo-giro" aria-hidden="true">↻</span><span class="rotulo-largo">Atualizar agora</span></button>
             </div>
             <details class="vivo-admin" id="vivo-admin">
               <summary>Mais ações</summary>
@@ -3039,9 +3031,9 @@
         const noturno = hora >= 19 || hora < 6;
         document.querySelectorAll("#turno-vivo button").forEach((b) => b.classList.toggle("ativo", b.dataset.turno === (noturno ? "noturno" : "diurno")));
       }
-      lerVivo(false);
+      lerVivo();
       pararRelogioVivo();
-      if (!vivoPausado) vivoTimer = setInterval(() => lerVivo(false), VIVO_LEITURA_MS);
+      if (!vivoPausado) vivoTimer = setInterval(() => lerVivo(), VIVO_LEITURA_MS);
     }
 
     function telaEstreita() {
@@ -3156,17 +3148,12 @@
         el.textContent = "🟢 Ao vivo · " + nomeTurnoCurto();
       }
       const historico = semAtualizacaoTela(estado);
-      const agoraBtn = $("btn-vivo-agora");
       const pausaBtn = $("btn-vivo-pausa");
       const encerrarBtn = $("btn-vivo-encerrar");
       const reabrirBtn = $("btn-vivo-reabrir");
       const maisPausa = $("mais-pausa");
       const maisEncerrar = $("mais-encerrar");
       const maisReabrir = $("mais-reabrir");
-      if (agoraBtn) {
-        agoraBtn.hidden = historico;
-        agoraBtn.disabled = historico;
-      }
       if (pausaBtn) {
         pausaBtn.disabled = historico;
         pausaBtn.hidden = historico;
@@ -3187,7 +3174,7 @@
         return;
       }
       if (!vivoPausado && !vivoTimer && aba === "vivo") {
-        vivoTimer = setInterval(() => lerVivo(false), VIVO_LEITURA_MS);
+        vivoTimer = setInterval(() => lerVivo(), VIVO_LEITURA_MS);
       }
     }
 
@@ -3731,26 +3718,14 @@
       return String(vivoEstado.data || "") === data && String(vivoEstado.turno || "") === turno;
     }
 
-    async function lerVivo(forcar) {
+    async function lerVivo() {
       if (vivoPedido) return;
-      if (forcar && semAtualizacaoTela(vivoEstado)) return;
-      if (!forcar && mesmoTurnoNaTela() && semAtualizacaoTela(vivoEstado)) return;
+      if (mesmoTurnoNaTela() && semAtualizacaoTela(vivoEstado)) return;
       vivoPedido = true;
-      const btn = $("btn-vivo-agora");
-      if (forcar && btn) {
-        btn.classList.add("ocupado");
-        btn.setAttribute("aria-busy", "true");
-      }
       const data = ($("data-vivo") && $("data-vivo").value) || "";
       const turno = turnoVivo();
       try {
-        const resp = forcar
-          ? await fetch("/api/live-report/sync", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ data, turno }),
-            })
-          : await fetch("/api/live-report?data=" + encodeURIComponent(data) + "&turno=" + encodeURIComponent(turno));
+        const resp = await fetch("/api/live-report?data=" + encodeURIComponent(data) + "&turno=" + encodeURIComponent(turno));
         const estado = await resp.json();
         if (!resp.ok && !estado.falha) {
           pintarAvisoVivo(vivoEstado, true);
@@ -3761,10 +3736,6 @@
         pintarAvisoVivo(vivoEstado, true);
       } finally {
         vivoPedido = false;
-        if (btn) {
-          btn.classList.remove("ocupado");
-          btn.removeAttribute("aria-busy");
-        }
       }
     }
 
@@ -3776,7 +3747,7 @@
         turnoBox.querySelectorAll("button").forEach((el) => el.classList.toggle("ativo", el === btn));
         vivoCodigo = "";
         vivoFoco = "";
-        lerVivo(false);
+        lerVivo();
       });
     }
     const dataVivo = $("data-vivo");
@@ -3784,11 +3755,9 @@
       dataVivo.addEventListener("change", () => {
         vivoCodigo = "";
         vivoFoco = "";
-        lerVivo(false);
+        lerVivo();
       });
     }
-    const btnAgora = $("btn-vivo-agora");
-    if (btnAgora) btnAgora.addEventListener("click", () => lerVivo(true));
     async function pedirTurno(acao) {
       const esperado = rotuloTurnoVivo();
       if (!esperado) return;
@@ -3828,8 +3797,8 @@
         if (maisPausa) maisPausa.textContent = rotulo;
         if (vivoPausado) pararRelogioVivo();
         else if (aba === "vivo") {
-          lerVivo(false);
-          vivoTimer = setInterval(() => lerVivo(false), VIVO_LEITURA_MS);
+          lerVivo();
+          vivoTimer = setInterval(() => lerVivo(), VIVO_LEITURA_MS);
         }
         if (vivoEstado) pintarAvisoVivo(vivoEstado, false);
       });
