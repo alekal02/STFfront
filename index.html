@@ -322,6 +322,31 @@
     button.segtrack { background: var(--segtrack); color: #fff; }
     button.parar { background: #a53d40; color: #fff; }
     button:disabled { opacity: .45; cursor: default; }
+    .operacao-painel {
+      position: fixed;
+      inset: 0;
+      z-index: 80;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      padding: 16px;
+      background: #10202873;
+    }
+    .operacao-painel[hidden] { display: none; }
+    .operacao-caixa {
+      width: min(420px, 100%);
+      margin-bottom: 8px;
+      padding: 18px 18px 16px;
+      border-radius: 16px;
+      background: #fff;
+      box-shadow: var(--shadow);
+    }
+    .operacao-caixa h2 { margin: 0 0 10px; font-size: 18px; }
+    .operacao-caixa p { margin: 2px 0; }
+    .operacao-quando { font-size: 16px; font-weight: 650; }
+    .operacao-caixa .sec, .operacao-caixa .principal { width: 100%; margin-top: 10px; }
+    .operacao-aviso { color: var(--muted); }
+    .operacao-aviso.erro { color: var(--err); }
     .chk {
       display: inline-flex;
       align-items: center;
@@ -1057,6 +1082,7 @@
             <details class="vivo-admin" id="vivo-admin">
               <summary>Mais ações</summary>
               <div class="vivo-admin-botoes">
+                <button type="button" class="sec" id="btn-vivo-operacao">Relatório da operação</button>
                 <button type="button" class="sec" id="btn-vivo-pausa" title="Pausa só a atualização desta tela. A sincronização do servidor continua.">Pausar tela</button>
                 <button type="button" class="sec perigo" id="btn-vivo-encerrar" hidden>Encerrar turno</button>
                 <button type="button" class="sec" id="btn-vivo-reabrir" hidden>Reabrir turno</button>
@@ -1357,11 +1383,22 @@
     <button type="button" data-ir="inlog">Inlog</button>
     <button type="button" data-ir="argos">Argos</button>
     <button type="button" data-ir="segtrack">Segtrack</button>
+    <button type="button" id="mais-operacao">Relatório da operação</button>
     <h2 class="mais-separa">Turno</h2>
     <button type="button" id="mais-pausa" title="Pausa só a atualização desta tela. A sincronização do servidor continua.">Pausar tela</button>
     <p class="mais-nota">Pausa só esta tela. O servidor continua sincronizando.</p>
     <button type="button" class="perigo" id="mais-encerrar" hidden>Encerrar turno</button>
     <button type="button" id="mais-reabrir" hidden>Reabrir turno</button>
+  </div>
+  <div id="operacao-painel" class="operacao-painel" hidden>
+    <div class="operacao-caixa" role="dialog" aria-labelledby="operacao-titulo">
+      <h2 id="operacao-titulo">Relatório da operação</h2>
+      <p class="operacao-quando" id="operacao-quando"></p>
+      <p id="operacao-situacao"></p>
+      <button type="button" class="principal" id="operacao-gerar">Gerar PDF</button>
+      <button type="button" class="sec" id="operacao-fechar">Fechar</button>
+      <p class="operacao-aviso" id="operacao-aviso" hidden></p>
+    </div>
   </div>
 
     <script>
@@ -3964,6 +4001,68 @@
     document.querySelectorAll("#painel-mais button[data-ir]").forEach((botao) => {
       botao.addEventListener("click", () => mostrarAba(botao.dataset.ir));
     });
+    function abrirOperacao() {
+      const data = ($("data-vivo") && $("data-vivo").value) || "";
+      const turno = turnoVivo();
+      const partes = String(data).split("-");
+      const quando = $("operacao-quando");
+      if (quando) quando.textContent = (partes.length === 3 ? partes[2] + "/" + partes[1] + "/" + partes[0] : data) + " · " + (turno === "diurno" ? "Diurno" : "Noturno");
+      const situacao = String((vivoEstado && vivoEstado.situacao) || "");
+      const rotulo = situacao === "ENCERRADO" ? "Encerrado" : situacao === "FINALIZANDO" ? "Finalizando" : "Ao vivo";
+      const linha = $("operacao-situacao");
+      if (linha) linha.textContent = "Situação: " + rotulo;
+      const aviso = $("operacao-aviso");
+      if (aviso) { aviso.hidden = true; aviso.textContent = ""; }
+      const painel = $("operacao-painel");
+      if (painel) painel.hidden = false;
+      document.body.classList.remove("mais-aberto");
+      const mais = $("painel-mais");
+      if (mais) mais.hidden = true;
+    }
+    async function baixarOperacao() {
+      const botao = $("operacao-gerar");
+      if (!botao || botao.disabled) return;
+      const data = ($("data-vivo") && $("data-vivo").value) || "";
+      const turno = turnoVivo();
+      const aviso = $("operacao-aviso");
+      botao.disabled = true;
+      botao.textContent = "Gerando relatório...";
+      if (aviso) { aviso.classList.remove("erro"); aviso.hidden = true; aviso.textContent = ""; }
+      try {
+        const url = urlApi("/api/live-report/operacao.pdf?data=" + encodeURIComponent(data) + "&turno=" + encodeURIComponent(turno));
+        const resp = await fetch(url, { cache: "no-store" });
+        if (!resp.ok) {
+          let msg = "Não foi possível gerar o relatório.";
+          try {
+            const corpo = await resp.json();
+            if (corpo && corpo.erro) msg = corpo.erro;
+          } catch (erro) { /* resposta sem JSON */ }
+          if (aviso) { aviso.classList.add("erro"); aviso.hidden = false; aviso.textContent = msg; }
+          return;
+        }
+        const blob = await resp.blob();
+        const disp = resp.headers.get("Content-Disposition") || "";
+        const achou = /filename="([^"]+)"/.exec(disp);
+        const rotulo = turno === "diurno" ? "Diurno" : "Noturno";
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = achou ? achou[1] : ("SAGTrack_Relatorio_Operacao_" + data + "_" + rotulo + ".pdf");
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(link.href), 4000);
+        if (aviso) { aviso.classList.remove("erro"); aviso.hidden = false; aviso.textContent = "Relatório gerado"; }
+      } finally {
+        botao.disabled = false;
+        botao.textContent = "Gerar PDF";
+      }
+    }
+    const btnOperacao = $("btn-vivo-operacao");
+    if (btnOperacao) btnOperacao.addEventListener("click", () => abrirOperacao());
+    const maisOperacao = $("mais-operacao");
+    if (maisOperacao) maisOperacao.addEventListener("click", () => abrirOperacao());
+    const gerarOperacao = $("operacao-gerar");
+    if (gerarOperacao) gerarOperacao.addEventListener("click", () => baixarOperacao());
+    const fecharOperacao = $("operacao-fechar");
+    if (fecharOperacao) fecharOperacao.addEventListener("click", () => { const painel = $("operacao-painel"); if (painel) painel.hidden = true; });
     const maisPausaBtn = $("mais-pausa");
     if (maisPausaBtn) maisPausaBtn.addEventListener("click", () => { const real = $("btn-vivo-pausa"); if (real) real.click(); });
     const maisEncerrarBtn = $("mais-encerrar");
