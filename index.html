@@ -3242,7 +3242,7 @@
         return {
           tabela: `<tr data-codigo="${codigo}" class="${sel}">
           <td>${escaparVivo(r.codigo || r.rota || "—")}</td>
-          <td>${escaparVivo(r.veiculo || "—")}</td>
+          <td>${escaparVivo(r.veiculo || "—")}<div class="rota-linha">${lugarVeiculo(r.placa)}</div></td>
           <td>${escaparVivo(r.placa || "—")}</td>
           <td>${escaparVivo(r.inicio || "—")}</td>
           <td class="${cls}">${pct.toFixed(0)}%<div class="barra-pct" aria-hidden="true"><i style="width:${pct}%"></i></div></td>
@@ -3255,6 +3255,7 @@
             <span class="rota-status ${cls}">${escaparVivo(r.status || "—")}</span>
             <span class="barra-pct ${cls}" aria-hidden="true"><i style="width:${pct}%"></i></span>
             <span class="rota-linha">${escaparVivo(r.veiculo || "—")} · ${escaparVivo(r.placa || "—")}</span>
+            <span class="rota-linha">${lugarVeiculo(r.placa)}</span>
             <span class="rota-linha">Início ${escaparVivo(horaCurta(r.inicio))} · GPS ${escaparVivo(horaCurta(r.ultimo_gps))}</span>
           </button>
           <button type="button" class="vivo-ir-mapa" data-codigo="${codigo}">Ver no mapa</button>
@@ -3309,6 +3310,7 @@
     let vivoMapa = null;
     let vivoCamadas = {};
     let vivoTrilha = {};
+    let vivoDesloc = {};
     let vivoPosicao = {};
     let vivoGrupoRotas = null;
     let vivoGrupoTrilha = null;
@@ -3416,6 +3418,12 @@
       }
     }
 
+    function lugarVeiculo(placa) {
+      const pos = ((vivoEstado && vivoEstado.posicoes) || []).find((item) => item.placa === placa);
+      if (!pos || !pos.rotulo_rota) return "";
+      return "Rota: " + pos.rotulo_rota;
+    }
+
     function desenharPosicoes() {
       const lista = (vivoEstado && vivoEstado.posicoes) || [];
       const vistos = new Set();
@@ -3423,15 +3431,25 @@
         if (pos.lat == null || pos.lon == null) return;
         vistos.add(pos.placa);
         const marca = vivoPosicao[pos.placa];
-        if (marca) marca.setLatLng([pos.lat, pos.lon]);
-        else {
+        const fora = !!pos.deslocamento;
+        const texto = (pos.placa || "") + (pos.rotulo_rota ? " · " + pos.rotulo_rota : "");
+        if (marca) {
+          marca.setLatLng([pos.lat, pos.lon]);
+          marca.setStyle({
+            radius: fora ? 5 : 7,
+            color: fora ? "#8aa0ab" : "#102028",
+            fillColor: fora ? "#d5dee3" : "#f2c14e",
+            fillOpacity: fora ? 0.7 : 0.95,
+          });
+          marca.setTooltipContent(texto);
+        } else {
           vivoPosicao[pos.placa] = L.circleMarker([pos.lat, pos.lon], {
-            radius: 7,
-            color: "#102028",
+            radius: fora ? 5 : 7,
+            color: fora ? "#8aa0ab" : "#102028",
             weight: 2,
-            fillColor: "#f2c14e",
-            fillOpacity: 0.95,
-          }).bindTooltip(pos.placa || "", { permanent: false }).addTo(vivoGrupoPos);
+            fillColor: fora ? "#d5dee3" : "#f2c14e",
+            fillOpacity: fora ? 0.7 : 0.95,
+          }).bindTooltip(texto, { permanent: false }).addTo(vivoGrupoPos);
         }
       });
       Object.keys(vivoPosicao).forEach((placa) => {
@@ -3447,9 +3465,13 @@
       if (vivoVistos.has(chave)) return;
       vivoVistos.add(chave);
       const latlng = [ponto.lat, ponto.lon];
-      const linha = vivoTrilha[ponto.placa];
+      const grupo = ponto.deslocamento ? vivoDesloc : vivoTrilha;
+      const linha = grupo[ponto.placa];
+      const estilo = ponto.deslocamento
+        ? { color: "#8aa0ab", weight: 2, opacity: 0.45, dashArray: "4 6" }
+        : { color: "#17324d", weight: 3, opacity: 0.85 };
       if (linha) linha.addLatLng(latlng);
-      else vivoTrilha[ponto.placa] = L.polyline([latlng], { color: "#17324d", weight: 3, opacity: 0.85 }).addTo(vivoGrupoTrilha);
+      else grupo[ponto.placa] = L.polyline([latlng], estilo).addTo(vivoGrupoTrilha);
       const marca = vivoPosicao[ponto.placa];
       if (marca) marca.setLatLng(latlng);
     }
@@ -3521,6 +3543,7 @@
       const pacote = await resp.json();
       vivoGrupoTrilha.clearLayers();
       vivoTrilha = {};
+      vivoDesloc = {};
       vivoVistos = new Set();
       (pacote.veiculos || []).forEach((veiculo) => {
         (veiculo.linhas || []).forEach((linha) => {
@@ -3528,6 +3551,12 @@
           const poly = L.polyline(linha, { color: "#17324d", weight: 3, opacity: 0.85 });
           poly.addTo(vivoGrupoTrilha);
           vivoTrilha[veiculo.placa] = poly;
+        });
+        (veiculo.deslocamento || []).forEach((linha) => {
+          if (!linha || linha.length < 2) return;
+          const poly = L.polyline(linha, { color: "#8aa0ab", weight: 2, opacity: 0.45, dashArray: "4 6" });
+          poly.addTo(vivoGrupoTrilha);
+          vivoDesloc[veiculo.placa] = poly;
         });
       });
       vivoCursor = pacote.cursor || "";
