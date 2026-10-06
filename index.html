@@ -3379,6 +3379,17 @@
       });
     }
 
+    function textoPct(valor) {
+      const n = Number(valor);
+      if (!Number.isFinite(n) || n <= 0) return "0%";
+      if (n >= 100) return "100%";
+      const decimo = Math.round(n * 10) / 10;
+      const seguro = decimo >= 100 ? 99.9 : decimo;
+      if (seguro <= 0) return "0,1%";
+      const texto = Number.isInteger(seguro) ? String(seguro) : seguro.toFixed(1);
+      return texto.replace(".", ",") + "%";
+    }
+
     function pintarTabelaVivo() {
       const corpo = $("vivo-linhas");
       const lista = $("vivo-lista");
@@ -3398,13 +3409,13 @@
           <td>${escaparVivo(r.veiculo || "—")}<div class="rota-linha">${lugarVeiculo(r.placa)}</div></td>
           <td>${escaparVivo(r.placa || "—")}</td>
           <td>${escaparVivo(r.inicio || "—")}</td>
-          <td class="${cls}">${pct.toFixed(0)}%<div class="barra-pct" aria-hidden="true"><i style="width:${pct}%"></i></div></td>
+          <td class="${cls}">${textoPct(r.percentual)}<div class="barra-pct" aria-hidden="true"><i style="width:${pct}%"></i></div></td>
           <td class="${cls}">${escaparVivo(r.status || "—")}</td>
           <td>${escaparVivo(r.ultimo_gps || "—")}</td>
         </tr>`,
           card: `<article class="rota-movel ${sel}">
           <button type="button" class="rota-abrir" data-abrir="${codigo}">
-            <span class="rota-movel-topo"><strong>${escaparVivo(r.codigo || r.rota || "—")}</strong><span class="${cls}">${pct.toFixed(0)}%</span></span>
+            <span class="rota-movel-topo"><strong>${escaparVivo(r.codigo || r.rota || "—")}</strong><span class="${cls}">${textoPct(r.percentual)}</span></span>
             <span class="rota-status ${cls}">${escaparVivo(r.status || "—")}</span>
             <span class="barra-pct ${cls}" aria-hidden="true"><i style="width:${pct}%"></i></span>
             <span class="rota-linha">${escaparVivo(r.veiculo || "—")} · ${escaparVivo(r.placa || "—")}</span>
@@ -3438,7 +3449,7 @@
       const nomeLongo = rota.rota && rota.rota !== rota.codigo ? `<p class="rota-linha">${escaparVivo(rota.rota)}</p>` : "";
       const linhas = [
         ["Status", rota.status],
-        ["Execução", (Number(rota.percentual) || 0).toFixed(0) + "%"],
+        ["Execução", textoPct(rota.percentual)],
         ["Veículo", rota.veiculo],
         ["Placa", rota.placa],
         ["Início", rota.inicio || "—"],
@@ -3517,7 +3528,7 @@
 
     function htmlPopup(codigo) {
       const r = rotaVivo(codigo) || { codigo };
-      const pct = (Number(r.percentual) || 0).toFixed(0) + "%";
+      const pct = textoPct(r.percentual);
       const codigoTxt = escaparVivo(r.codigo || codigo);
       const statusTxt = escaparVivo(r.status || "—");
       if (telaEstreita()) {
