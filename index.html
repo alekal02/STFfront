@@ -1195,9 +1195,7 @@
             <p class="vivo-legenda">
               <span><i style="background:#1b8a5a"></i>Concluída</span>
               <span><i style="background:#c56a1a"></i>Parcial</span>
-              <span><i style="background:#1d6a8a"></i>Início</span>
               <span><i style="background:#b7c3c9"></i>Não iniciada</span>
-              <span><i style="background:#8a3d3d"></i>Só passagem</span>
               <span><i style="background:#5b4b8a"></i>Apoio</span>
             </p>
           </details>
@@ -1208,9 +1206,7 @@
               <option value="todas">Todas</option>
               <option value="concluida">Concluídas</option>
               <option value="parcial">Parciais</option>
-              <option value="inicio">Início</option>
               <option value="nao">Não iniciadas</option>
-              <option value="passagem">Só passagem</option>
               <option value="apoio">Apoio</option>
             </select>
           </label>
@@ -1218,9 +1214,7 @@
             <button type="button" class="ativo" data-grupo="todas">Todas</button>
             <button type="button" data-grupo="concluida">Concluídas</button>
             <button type="button" data-grupo="parcial">Parciais</button>
-            <button type="button" data-grupo="inicio">Início</button>
             <button type="button" data-grupo="nao">Não iniciadas</button>
-            <button type="button" data-grupo="passagem">Só passagem</button>
             <button type="button" data-grupo="apoio">Apoio</button>
           </div>
           <div id="vivo-lista" class="vivo-lista" aria-busy="true"></div>
@@ -3189,9 +3183,7 @@
     function classeStatus(grupo) {
       if (grupo === "concluida") return "st-concluida";
       if (grupo === "parcial") return "st-parcial";
-      if (grupo === "inicio") return "st-inicio";
       if (grupo === "apoio") return "st-apoio";
-      if (grupo === "passagem") return "st-passagem";
       return "st-nao";
     }
 
@@ -3202,9 +3194,7 @@
         ["Rotas", r.previstas ?? 0, ""],
         ["Concluídas", r.concluidas ?? 0, "st-concluida"],
         ["Parciais", r.parciais ?? 0, "st-parcial"],
-        ["Início", r.inicio ?? 0, "st-inicio"],
         ["Não iniciadas", r.nao_iniciadas ?? 0, "st-nao"],
-        ["Só passagem", r.passagem ?? 0, "st-passagem"],
       ];
       const n = r.apoios || 0;
       if (n > 0) itens.push(["Apoio", n, "st-apoio"]);
@@ -3313,9 +3303,7 @@
     const CORES_VIVO = {
       concluida: "#1b8a5a",
       parcial: "#c56a1a",
-      inicio: "#1d6a8a",
       nao: "#b7c3c9",
-      passagem: "#8a3d3d",
       apoio: "#5b4b8a",
     };
     let vivoMapa = null;
