@@ -640,12 +640,6 @@
     .leaflet-control-layers-expanded { font-size: 12px; line-height: 1.35; }
     .vivo-legenda { display: flex; flex-wrap: wrap; gap: 10px; margin: 8px 0 0; color: var(--muted); font-size: 12px; }
     .vivo-mapa { position: relative; }
-    .vivo-dificil-painel { position: absolute; z-index: 500; left: 8px; bottom: 36px; max-width: min(260px, calc(100% - 56px)); margin: 0; padding: 6px 8px; border: 1px solid #d5dee3; border-radius: 8px; background: #fff; font-size: 13px; line-height: 1.35; box-shadow: 0 1px 4px rgba(16, 32, 40, .18); }
-    .vivo-dificil-painel ul { margin: 0; padding: 0; }
-    .vivo-dificil-painel li { list-style: none; }
-    .vivo-dificil-painel li[data-sinal="desatualizado"],
-    .vivo-dificil-painel li[data-sinal="sem_rastreamento"] { color: #9a3412; font-weight: 700; }
-    .vivo-dificil-painel[hidden] { display: none; }
     .leaflet-tooltip.area-dificil-nome {
       background: #fff;
       border: 2px solid #7c2d12;
@@ -701,7 +695,7 @@
     .vivo-marca { display: none; }
     .vivo-faixa { display: none; margin: 0; }
     .txt-curto { display: none; }
-    .vivo-fechar-rotas, .vivo-fechar-dificil { display: none; }
+    .vivo-fechar-rotas { display: none; }
     .vivo-cards { display: flex; flex-direction: column; gap: 8px; }
     .vivo-hero {
       display: flex;
@@ -957,7 +951,7 @@
         border-radius: 12px;
         box-shadow: 0 8px 28px rgba(16, 32, 40, .22);
       }
-      .vivo-fechar-rotas, .vivo-fechar-dificil {
+      .vivo-fechar-rotas {
         display: inline-flex;
         align-items: center;
         justify-content: center;
@@ -1327,10 +1321,6 @@
           <div class="vivo-mapa-acoes">
             <button type="button" id="vivo-so" hidden><span class="txt-longo">Ver somente esta rota</span><span class="txt-curto">Somente</span></button>
             <button type="button" id="vivo-todas" hidden><span class="txt-longo">Mostrar todas</span><span class="txt-curto">Todas</span></button>
-          </div>
-          <div id="vivo-dificil-painel" class="vivo-dificil-painel" hidden>
-            <button type="button" class="vivo-fechar-dificil" id="vivo-fechar-dificil">Fechar</button>
-            <ul id="vivo-dificil-lista"></ul>
           </div>
           <details class="vivo-legenda-caixa">
             <summary>Legenda</summary>
@@ -3703,12 +3693,6 @@
       window.vivoMapa = vivoMapa;
       window.vivoGrupoDificil = vivoGrupoDificil;
       window.vivoGrupoAreas = vivoGrupoAreas;
-      vivoMapa.on("overlayadd overlayremove", (ev) => {
-        if (ev.layer !== vivoGrupoDificil) return;
-        const painel = $("vivo-dificil-painel");
-        if (!painel) return;
-        painel.hidden = ev.type === "overlayremove";
-      });
       setTimeout(() => vivoMapa && vivoMapa.invalidateSize(), 50);
       if (!folha.__vivoObs && window.ResizeObserver) {
         let vivoQuadro = 0;
@@ -4022,20 +4006,6 @@
         return unicos.size >= 3;
       }
       const coresMarca = { "Difícil acesso": "#e07a00", "Deslocamento": "#6d7c86", "Na rota": "#17324d" };
-      const lista = $("vivo-dificil-lista");
-      const painel = $("vivo-dificil-painel");
-      if (lista) {
-        lista.innerHTML = (pacote.veiculos || []).map((veiculo) => {
-          const rotulo = veiculo.rotulo || veiculo.aviso || veiculo.situacao || "Sem rastreamento";
-          const sinal = veiculo.sinal || (rotulo === "Sem rastreamento" ? "sem_rastreamento" : "");
-          const gps = veiculo.ultimo_gps && sinal !== "sem_rastreamento" ? " · GPS " + horaCurta(veiculo.ultimo_gps) : "";
-          return `<li data-codigo="${escaparVivo(veiculo.codigo)}" data-situacao="${escaparVivo(rotulo)}" data-sinal="${escaparVivo(sinal)}"><b>${escaparVivo(veiculo.codigo)}</b> — ${escaparVivo(rotulo)}${escaparVivo(gps)}</li>`;
-        }).join("");
-      }
-      if (painel) {
-        const ligado = !!(vivoMapa && vivoMapa.hasLayer(vivoGrupoDificil));
-        painel.hidden = !ligado;
-      }
       let nTrajeto = 0;
       let nIsolados = 0;
       let nPoligonos = 0;
@@ -4587,13 +4557,6 @@
         document.body.classList.remove("vivo-rotas");
         atualizarVistaVivo();
         requestAnimationFrame(() => vivoMapa && vivoMapa.invalidateSize());
-      });
-    }
-    const fecharDificil = $("vivo-fechar-dificil");
-    if (fecharDificil) {
-      fecharDificil.addEventListener("click", () => {
-        const painel = $("vivo-dificil-painel");
-        if (painel) painel.hidden = true;
       });
     }
     atualizarBotoesMapa();
