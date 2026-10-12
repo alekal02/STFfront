@@ -644,6 +644,20 @@
     .vivo-dificil-painel ul { margin: 0; padding: 0; }
     .vivo-dificil-painel li { list-style: none; }
     .vivo-dificil-painel[hidden] { display: none; }
+    .leaflet-tooltip.area-dificil-nome {
+      background: #fff;
+      border: 2px solid #7c2d12;
+      border-radius: 4px;
+      color: #7c2d12;
+      font-weight: 800;
+      font-size: 11px;
+      line-height: 1.2;
+      padding: 1px 5px;
+      box-shadow: 0 1px 2px rgba(16, 32, 40, .25);
+      white-space: nowrap;
+      pointer-events: none;
+    }
+    .leaflet-tooltip.area-dificil-nome::before { display: none; }
     .vivo-legenda i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; }
     .vivo-filtros { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
     .vivo-filtros button { background: #eef3f5; color: var(--navy); }
@@ -1029,6 +1043,7 @@
       .leaflet-control-zoom a { width: 32px; height: 32px; line-height: 32px; font-size: 16px; }
       .leaflet-control-layers { border-radius: 8px; }
       .leaflet-popup-content { margin: 10px 12px; }
+      .leaflet-tooltip.area-dificil-nome { font-size: 10px; padding: 0 4px; }
       .vivo-popup { min-width: 0; max-width: 220px; font-size: 15px; }
       .vivo-popup button { min-height: 44px; width: 100%; margin-top: 6px; }
       #vivo-detalhe:not([hidden]) {
@@ -1323,6 +1338,7 @@
               <span><i style="background:#b7c3c9"></i>Não iniciada</span>
               <span><i style="background:#5b4b8a"></i>Apoio</span>
               <span><i style="background:#e07a00"></i>Difícil acesso</span>
+              <span><i style="background:#f6c08a;box-shadow:inset 0 0 0 2px #7c2d12"></i>Áreas de difícil acesso</span>
               <span><i style="background:#f2c14e;border-radius:50%"></i>Pino = posição atual</span>
               <span id="legenda-trilha"><i style="background:#17324d"></i>Trilha = GPS persistido</span>
               <span><i style="background:#8aa0ab;border-radius:50%"></i>GPS desatualizado</span>
@@ -3543,12 +3559,14 @@
     let vivoGrupoRotas = null;
     let vivoGrupoTrilha = null;
     let vivoGrupoDificil = null;
+    let vivoGrupoAreas = null;
     let vivoGrupoPos = null;
     let vivoGrupoEnt = null;
     let vivoGrupoSai = null;
     let vivoGrupoFeitos = null;
     let vivoGrupoFalta = null;
     let vivoChaveMapa = "";
+    let vivoAreasNoQuadro = "";
     let vivoAssinatura = "";
     let vivoTrilhaPedido = null;
     let vivoDificilPedido = null;
@@ -3656,6 +3674,13 @@
         pane.style.zIndex = "620";
         pane.style.pointerEvents = "auto";
       }
+      if (!vivoMapa.getPane("areas-dificil")) {
+        vivoMapa.createPane("areas-dificil");
+        const areasPane = vivoMapa.getPane("areas-dificil");
+        areasPane.style.zIndex = "450";
+        areasPane.style.pointerEvents = "none";
+      }
+      vivoGrupoAreas = L.featureGroup().addTo(vivoMapa);
       vivoGrupoDificil = L.layerGroup().addTo(vivoMapa);
       vivoGrupoPos = L.layerGroup().addTo(vivoMapa);
       vivoGrupoEnt = L.layerGroup();
@@ -3665,6 +3690,7 @@
       L.control.layers(null, {
         "Rotas oficiais": vivoGrupoRotas,
         "Trajetória GPS": vivoGrupoTrilha,
+        "Áreas de difícil acesso": vivoGrupoAreas,
         "Difícil acesso": vivoGrupoDificil,
         "Posição atual": vivoGrupoPos,
         "Entrada": vivoGrupoEnt,
@@ -3672,6 +3698,7 @@
       }, { collapsed: estreito }).addTo(vivoMapa);
       window.vivoMapa = vivoMapa;
       window.vivoGrupoDificil = vivoGrupoDificil;
+      window.vivoGrupoAreas = vivoGrupoAreas;
       vivoMapa.on("overlayadd overlayremove", (ev) => {
         if (ev.layer !== vivoGrupoDificil) return;
         const painel = $("vivo-dificil-painel");
@@ -3686,6 +3713,7 @@
           vivoQuadro = requestAnimationFrame(() => {
             vivoQuadro = 0;
             if (vivoMapa) vivoMapa.invalidateSize();
+            enquadrarAreas();
           });
         });
         folha.__vivoObs.observe(folha);
@@ -3816,6 +3844,41 @@
       }
     }
 
+    function limitesDoGrupo(grupo) {
+      if (!grupo || !grupo.getLayers || !grupo.getLayers().length) return null;
+      try {
+        const caixa = grupo.getBounds();
+        return caixa && caixa.isValid() ? caixa : null;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function enquadrarAreas() {
+      if (!vivoMapa || !vivoGrupoAreas) return;
+      const folha = $("vivo-folha");
+      if (!folha || folha.clientWidth < 200 || folha.clientHeight < 200) return;
+      const marca = vivoChaveMapa + "|" + folha.clientWidth + "x" + folha.clientHeight;
+      if (vivoAreasNoQuadro === marca) return;
+      const areas = limitesDoGrupo(vivoGrupoAreas);
+      if (!areas) return;
+      vivoMapa.invalidateSize();
+      const rotas = limitesDoGrupo(vivoGrupoRotas);
+      encaixarLimites(rotas ? rotas.extend(areas) : areas);
+      vivoAreasNoQuadro = marca;
+    }
+
+    function encaixarLimites(limites) {
+      if (!vivoMapa || !limites || !limites.isValid()) return;
+      const estreito = window.matchMedia("(max-width: 900px)").matches;
+      vivoMapa.fitBounds(limites.pad(0.08), {
+        paddingTopLeft: [18, estreito ? 18 : 24],
+        paddingBottomRight: [18, estreito ? 132 : 28],
+        maxZoom: 14,
+        animate: false,
+      });
+    }
+
     function desenharColecao(colecao, t0) {
       vivoGrupoRotas.clearLayers();
       vivoCamadas = {};
@@ -3845,9 +3908,10 @@
           });
         },
       }).eachLayer((layer) => vivoGrupoRotas.addLayer(layer));
-      let limites = null;
-      try { limites = vivoGrupoRotas.getBounds(); } catch (e) { limites = null; }
-      if (limites && limites.isValid()) vivoMapa.fitBounds(limites.pad(0.08), { animate: false });
+      let limites = limitesDoGrupo(vivoGrupoRotas);
+      const areas = limitesDoGrupo(vivoGrupoAreas);
+      if (areas) limites = limites ? limites.extend(areas) : areas;
+      encaixarLimites(limites);
       vivoDesenhoMs = Math.round(performance.now() - t0);
       window.vivoCamadas = vivoCamadas;
       const folha = $("vivo-folha");
@@ -3924,6 +3988,7 @@
     function desenharDificil(pacote) {
       if (!vivoGrupoDificil) return;
       vivoGrupoDificil.clearLayers();
+      if (vivoGrupoAreas) vivoGrupoAreas.clearLayers();
       const traco = { pane: "dificil", smoothFactor: 0, lineCap: "round", lineJoin: "round" };
       const estilos = {
         trajeto: Object.assign({ color: "#17324d", weight: 4, opacity: 0.9 }, traco),
@@ -4002,6 +4067,32 @@
         const marca = L.circleMarker([lat, lon], { radius: 8, color: "#102028", weight: 2, fillColor: cor, fillOpacity: 1, pane: "dificil" }).bindTooltip(texto).addTo(vivoGrupoDificil);
         ligarPopupVeiculo(marca, veiculo);
       });
+      let nAreas = 0;
+      if (vivoGrupoAreas) {
+        (pacote.areas || []).forEach((area) => {
+          const aneis = (area.poligonos || []).map(pontosDaLinha).filter(anelValido);
+          if (!aneis.length) return;
+          const bairro = area.nome || area.completo || "Difícil acesso";
+          nAreas += 1;
+          aneis.forEach((anel) => {
+            L.polygon(anel, {
+              color: "#7c2d12",
+              weight: 4,
+              opacity: 1,
+              fillColor: "#e07a00",
+              fillOpacity: 0.14,
+              pane: "areas-dificil",
+              className: "area-dificil",
+              interactive: false,
+            }).bindTooltip(bairro, {
+              permanent: true,
+              direction: "center",
+              className: "area-dificil-nome",
+              opacity: 1,
+            }).addTo(vivoGrupoAreas);
+          });
+        });
+      }
       const folha = $("vivo-folha");
       const resumo = (pacote && pacote.resumo) || {};
       if (folha) {
@@ -4012,7 +4103,10 @@
         folha.dataset.trajeto = String(nTrajeto);
         folha.dataset.isolados = String(nIsolados);
         folha.dataset.dificilPoligonos = String(nPoligonos);
+        folha.dataset.areasPoligonos = String(nAreas);
+        folha.dataset.areasCamada = (pacote && pacote.camada) || "";
       }
+      enquadrarAreas();
       window.vivoDificil = pacote;
     }
 
