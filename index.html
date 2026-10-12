@@ -639,7 +639,8 @@
     .vivo-popup b { display: inline-block; min-width: 78px; }
     .leaflet-control-layers-expanded { font-size: 12px; line-height: 1.35; }
     .vivo-legenda { display: flex; flex-wrap: wrap; gap: 10px; margin: 8px 0 0; color: var(--muted); font-size: 12px; }
-    .vivo-dificil-painel { margin: 0 0 6px; padding: 6px 8px; border: 1px solid #d5dee3; border-radius: 8px; background: #fff; font-size: 13px; line-height: 1.35; }
+    .vivo-mapa { position: relative; }
+    .vivo-dificil-painel { position: absolute; z-index: 500; left: 8px; bottom: 36px; max-width: min(260px, calc(100% - 56px)); margin: 0; padding: 6px 8px; border: 1px solid #d5dee3; border-radius: 8px; background: #fff; font-size: 13px; line-height: 1.35; box-shadow: 0 1px 4px rgba(16, 32, 40, .18); }
     .vivo-dificil-painel ul { margin: 0; padding: 0; }
     .vivo-dificil-painel li { list-style: none; }
     .vivo-dificil-painel[hidden] { display: none; }
@@ -1008,7 +1009,6 @@
       }
       .txt-longo { display: none; }
       .txt-curto { display: inline; }
-      #vivo-dificil-painel { display: none !important; }
       #vivo-mapa-espera { position: absolute; left: 8px; right: 8px; top: 46px; z-index: 610; margin: 0; }
       .rota-movel { gap: 2px; padding: 8px 10px; }
       .rota-movel .vivo-ir-mapa { width: 100%; min-height: 36px; }
@@ -3650,6 +3650,12 @@
       }).addTo(vivoMapa);
       vivoGrupoRotas = L.featureGroup().addTo(vivoMapa);
       vivoGrupoTrilha = L.layerGroup().addTo(vivoMapa);
+      if (!vivoMapa.getPane("dificil")) {
+        vivoMapa.createPane("dificil");
+        const pane = vivoMapa.getPane("dificil");
+        pane.style.zIndex = "620";
+        pane.style.pointerEvents = "auto";
+      }
       vivoGrupoDificil = L.layerGroup().addTo(vivoMapa);
       vivoGrupoPos = L.layerGroup().addTo(vivoMapa);
       vivoGrupoEnt = L.layerGroup();
@@ -3670,7 +3676,7 @@
         if (ev.layer !== vivoGrupoDificil) return;
         const painel = $("vivo-dificil-painel");
         if (!painel) return;
-        painel.hidden = telaEstreita() || ev.type === "overlayremove";
+        painel.hidden = ev.type === "overlayremove";
       });
       setTimeout(() => vivoMapa && vivoMapa.invalidateSize(), 50);
       if (!folha.__vivoObs && window.ResizeObserver) {
@@ -3918,16 +3924,34 @@
     function desenharDificil(pacote) {
       if (!vivoGrupoDificil) return;
       vivoGrupoDificil.clearLayers();
+      const traco = { pane: "dificil", smoothFactor: 0, lineCap: "round", lineJoin: "round" };
       const estilos = {
-        na_rota: { color: "#17324d", weight: 2, opacity: 0.35 },
-        deslocamento: { color: "#6d7c86", weight: 2, opacity: 0.75, dashArray: "4 6" },
-        dificil: { color: "#e07a00", weight: 5, opacity: 0.95 },
+        trajeto: Object.assign({ color: "#17324d", weight: 4, opacity: 0.9 }, traco),
+        na_rota: Object.assign({ color: "#17324d", weight: 4, opacity: 0.9 }, traco),
+        deslocamento: Object.assign({ color: "#5c6b73", weight: 4, opacity: 0.9, dashArray: "6 6" }, traco),
+        dificil: Object.assign({ color: "#e07a00", weight: 5, opacity: 0.95 }, traco),
       };
       const rotulos = {
+        trajeto: "trajetória GPS",
         na_rota: "na rota oficial",
         deslocamento: "deslocamento",
         dificil: "difícil acesso",
       };
+      function pontosDaLinha(linha) {
+        const pontos = [];
+        (linha || []).forEach((par) => {
+          if (!par || par.length < 2 || par[0] == null || par[1] == null) return;
+          const lat = Number(par[0]);
+          const lon = Number(par[1]);
+          if (Number.isFinite(lat) && Number.isFinite(lon)) pontos.push([lat, lon]);
+        });
+        return pontos;
+      }
+      function anelValido(pontos) {
+        if (pontos.length < 4) return false;
+        const unicos = new Set(pontos.map((p) => p[0] + "," + p[1]));
+        return unicos.size >= 3;
+      }
       const coresMarca = { "Difícil acesso": "#e07a00", "Deslocamento": "#6d7c86", "Na rota": "#17324d" };
       const lista = $("vivo-dificil-lista");
       const painel = $("vivo-dificil-painel");
@@ -3940,30 +3964,42 @@
       }
       if (painel) {
         const ligado = !!(vivoMapa && vivoMapa.hasLayer(vivoGrupoDificil));
-        painel.hidden = telaEstreita() || !ligado;
+        painel.hidden = !ligado;
       }
+      let nTrajeto = 0;
+      let nIsolados = 0;
+      let nPoligonos = 0;
       (pacote.veiculos || []).forEach((veiculo) => {
         const nome = (veiculo.codigo || "") + " · " + (veiculo.placa || "");
-        ["na_rota", "deslocamento", "dificil"].forEach((tipo) => {
+        const temTrajeto = Object.prototype.hasOwnProperty.call(veiculo, "trajeto");
+        const tipos = temTrajeto ? ["trajeto", "dificil"] : ["na_rota", "deslocamento", "dificil"];
+        tipos.forEach((tipo) => {
           (veiculo[tipo] || []).forEach((linha) => {
-            const pontos = [];
-            (linha || []).forEach((par) => {
-              if (!par || par.length < 2 || par[0] == null || par[1] == null) return;
-              const lat = Number(par[0]);
-              const lon = Number(par[1]);
-              if (Number.isFinite(lat) && Number.isFinite(lon)) pontos.push([lat, lon]);
-            });
+            const pontos = pontosDaLinha(linha);
             if (pontos.length < 2) return;
+            if (tipo === "trajeto") nTrajeto += 1;
             L.polyline(pontos, estilos[tipo]).bindTooltip(nome + " · " + rotulos[tipo], { sticky: true }).addTo(vivoGrupoDificil);
           });
+        });
+        (veiculo.poligonos || []).forEach((anel) => {
+          const pontos = pontosDaLinha(anel);
+          if (!anelValido(pontos)) return;
+          nPoligonos += 1;
+          L.polygon(pontos, { color: "#e07a00", weight: 2, fillColor: "#e07a00", fillOpacity: 0.18, pane: "dificil" }).bindTooltip(nome + " · difícil acesso", { sticky: true }).addTo(vivoGrupoDificil);
+        });
+        const cor = coresMarca[veiculo.situacao] || "#6d7c86";
+        (veiculo.isolados || []).forEach((par) => {
+          const pontos = pontosDaLinha([par]);
+          if (!pontos.length) return;
+          nIsolados += 1;
+          L.circleMarker(pontos[0], { radius: 6, color: "#102028", weight: 2, fillColor: cor, fillOpacity: 1, pane: "dificil" }).bindTooltip(nome + " · " + (veiculo.situacao || "GPS"), { sticky: true }).addTo(vivoGrupoDificil);
         });
         if (veiculo.lat == null || veiculo.lon == null || (veiculo.situacao || "") === "Sem rastreamento") return;
         const lat = Number(veiculo.lat);
         const lon = Number(veiculo.lon);
         if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
-        const cor = coresMarca[veiculo.situacao] || "#6d7c86";
         const texto = nome + " · " + (veiculo.situacao || "") + (veiculo.ultimo_gps ? " · GPS " + horaCurta(veiculo.ultimo_gps) : "");
-        const marca = L.circleMarker([lat, lon], { radius: 8, color: "#102028", weight: 2, fillColor: cor, fillOpacity: 1 }).bindTooltip(texto).addTo(vivoGrupoDificil);
+        const marca = L.circleMarker([lat, lon], { radius: 8, color: "#102028", weight: 2, fillColor: cor, fillOpacity: 1, pane: "dificil" }).bindTooltip(texto).addTo(vivoGrupoDificil);
         ligarPopupVeiculo(marca, veiculo);
       });
       const folha = $("vivo-folha");
@@ -3973,6 +4009,9 @@
         folha.dataset.dificilFora = String((resumo.trechos_dificil || 0) + (resumo.trechos_deslocamento || 0));
         folha.dataset.dificilPulsos = String(resumo.pulsos || 0);
         folha.dataset.dificilMs = String(resumo.ms || 0);
+        folha.dataset.trajeto = String(nTrajeto);
+        folha.dataset.isolados = String(nIsolados);
+        folha.dataset.dificilPoligonos = String(nPoligonos);
       }
       window.vivoDificil = pacote;
     }
@@ -4089,7 +4128,6 @@
     function ocultarMalhaNoDetalhe() {
       if (!vivoMapa || !vivoGrupoDificil) return;
       if (vivoDificilAntes === null) vivoDificilAntes = vivoMapa.hasLayer(vivoGrupoDificil);
-      if (vivoMapa.hasLayer(vivoGrupoDificil)) vivoMapa.removeLayer(vivoGrupoDificil);
     }
 
     const vivoDetalheCache = {};
