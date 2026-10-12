@@ -643,6 +643,8 @@
     .vivo-dificil-painel { position: absolute; z-index: 500; left: 8px; bottom: 36px; max-width: min(260px, calc(100% - 56px)); margin: 0; padding: 6px 8px; border: 1px solid #d5dee3; border-radius: 8px; background: #fff; font-size: 13px; line-height: 1.35; box-shadow: 0 1px 4px rgba(16, 32, 40, .18); }
     .vivo-dificil-painel ul { margin: 0; padding: 0; }
     .vivo-dificil-painel li { list-style: none; }
+    .vivo-dificil-painel li[data-sinal="desatualizado"],
+    .vivo-dificil-painel li[data-sinal="sem_rastreamento"] { color: #9a3412; font-weight: 700; }
     .vivo-dificil-painel[hidden] { display: none; }
     .leaflet-tooltip.area-dificil-nome {
       background: #fff;
@@ -3636,6 +3638,8 @@
 
     function situacaoVeiculo(pos) {
       if (!pos) return "—";
+      if (pos.rotulo) return String(pos.rotulo);
+      if (pos.aviso) return String(pos.aviso);
       if (pos.situacao) return String(pos.situacao);
       if (pos.rotulo_rota) return String(pos.rotulo_rota);
       if (pos.deslocamento) return "Deslocamento";
@@ -3991,8 +3995,8 @@
       if (vivoGrupoAreas) vivoGrupoAreas.clearLayers();
       const traco = { pane: "dificil", smoothFactor: 0, lineCap: "round", lineJoin: "round" };
       const estilos = {
-        trajeto: Object.assign({ color: "#17324d", weight: 4, opacity: 0.9 }, traco),
-        na_rota: Object.assign({ color: "#17324d", weight: 4, opacity: 0.9 }, traco),
+        trajeto: Object.assign({ color: "#1d4ed8", weight: 5, opacity: 0.95 }, traco),
+        na_rota: Object.assign({ color: "#1d4ed8", weight: 5, opacity: 0.95 }, traco),
         deslocamento: Object.assign({ color: "#5c6b73", weight: 4, opacity: 0.9, dashArray: "6 6" }, traco),
         dificil: Object.assign({ color: "#e07a00", weight: 5, opacity: 0.95 }, traco),
       };
@@ -4022,9 +4026,10 @@
       const painel = $("vivo-dificil-painel");
       if (lista) {
         lista.innerHTML = (pacote.veiculos || []).map((veiculo) => {
-          const sit = veiculo.situacao || "Sem rastreamento";
-          const gps = veiculo.ultimo_gps && sit !== "Sem rastreamento" ? " · GPS " + horaCurta(veiculo.ultimo_gps) : "";
-          return `<li data-codigo="${escaparVivo(veiculo.codigo)}" data-situacao="${escaparVivo(sit)}"><b>${escaparVivo(veiculo.codigo)}</b> — ${escaparVivo(sit)}${escaparVivo(gps)}</li>`;
+          const rotulo = veiculo.rotulo || veiculo.aviso || veiculo.situacao || "Sem rastreamento";
+          const sinal = veiculo.sinal || (rotulo === "Sem rastreamento" ? "sem_rastreamento" : "");
+          const gps = veiculo.ultimo_gps && sinal !== "sem_rastreamento" ? " · GPS " + horaCurta(veiculo.ultimo_gps) : "";
+          return `<li data-codigo="${escaparVivo(veiculo.codigo)}" data-situacao="${escaparVivo(rotulo)}" data-sinal="${escaparVivo(sinal)}"><b>${escaparVivo(veiculo.codigo)}</b> — ${escaparVivo(rotulo)}${escaparVivo(gps)}</li>`;
         }).join("");
       }
       if (painel) {
@@ -4034,10 +4039,15 @@
       let nTrajeto = 0;
       let nIsolados = 0;
       let nPoligonos = 0;
+      let nEventos = 0;
+      const areasAtuais = new Set();
+      const areasVisitadas = new Set();
       (pacote.veiculos || []).forEach((veiculo) => {
         const nome = (veiculo.codigo || "") + " · " + (veiculo.placa || "");
+        if (veiculo.area_id) areasAtuais.add(veiculo.area_id);
+        (veiculo.eventos || []).forEach((ev) => { if (ev && ev.area_id) areasVisitadas.add(ev.area_id); });
         const temTrajeto = Object.prototype.hasOwnProperty.call(veiculo, "trajeto");
-        const tipos = temTrajeto ? ["trajeto", "dificil"] : ["na_rota", "deslocamento", "dificil"];
+        const tipos = temTrajeto ? ["trajeto"] : ["na_rota", "deslocamento", "dificil"];
         tipos.forEach((tipo) => {
           (veiculo[tipo] || []).forEach((linha) => {
             const pontos = pontosDaLinha(linha);
@@ -4052,18 +4062,31 @@
           nPoligonos += 1;
           L.polygon(pontos, { color: "#e07a00", weight: 2, fillColor: "#e07a00", fillOpacity: 0.18, pane: "dificil" }).bindTooltip(nome + " · difícil acesso", { sticky: true }).addTo(vivoGrupoDificil);
         });
-        const cor = coresMarca[veiculo.situacao] || "#6d7c86";
+        let cor = coresMarca[veiculo.situacao] || "#6d7c86";
+        if (veiculo.sinal === "desatualizado") cor = "#b45309";
+        else if (veiculo.area_id) cor = "#1d4ed8";
+        (veiculo.eventos || []).forEach((ev) => {
+          if (!ev || ev.lat == null || ev.lon == null) return;
+          const latEv = Number(ev.lat);
+          const lonEv = Number(ev.lon);
+          if (!Number.isFinite(latEv) || !Number.isFinite(lonEv)) return;
+          nEventos += 1;
+          const entrada = ev.tipo !== "saida";
+          const corEv = entrada ? "#1b8a5a" : "#b34145";
+          const verbo = entrada ? "Entrada" : "Saída";
+          L.circleMarker([latEv, lonEv], { radius: 5, color: corEv, weight: 2, fillColor: corEv, fillOpacity: 1, pane: "dificil" }).bindTooltip(nome + " · " + verbo + " · " + (ev.area || "") + (ev.ts ? " · " + horaCurta(ev.ts) : ""), { sticky: true }).addTo(vivoGrupoDificil);
+        });
         (veiculo.isolados || []).forEach((par) => {
           const pontos = pontosDaLinha([par]);
           if (!pontos.length) return;
           nIsolados += 1;
-          L.circleMarker(pontos[0], { radius: 6, color: "#102028", weight: 2, fillColor: cor, fillOpacity: 1, pane: "dificil" }).bindTooltip(nome + " · " + (veiculo.situacao || "GPS"), { sticky: true }).addTo(vivoGrupoDificil);
+          L.circleMarker(pontos[0], { radius: 6, color: "#102028", weight: 2, fillColor: cor, fillOpacity: 1, pane: "dificil" }).bindTooltip(nome + " · " + (veiculo.rotulo || veiculo.situacao || "GPS"), { sticky: true }).addTo(vivoGrupoDificil);
         });
         if (veiculo.lat == null || veiculo.lon == null || (veiculo.situacao || "") === "Sem rastreamento") return;
         const lat = Number(veiculo.lat);
         const lon = Number(veiculo.lon);
         if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
-        const texto = nome + " · " + (veiculo.situacao || "") + (veiculo.ultimo_gps ? " · GPS " + horaCurta(veiculo.ultimo_gps) : "");
+        const texto = nome + " · " + (veiculo.rotulo || veiculo.situacao || "") + (veiculo.ultimo_gps ? " · GPS " + horaCurta(veiculo.ultimo_gps) : "");
         const marca = L.circleMarker([lat, lon], { radius: 8, color: "#102028", weight: 2, fillColor: cor, fillOpacity: 1, pane: "dificil" }).bindTooltip(texto).addTo(vivoGrupoDificil);
         ligarPopupVeiculo(marca, veiculo);
       });
@@ -4073,18 +4096,25 @@
           const aneis = (area.poligonos || []).map(pontosDaLinha).filter(anelValido);
           if (!aneis.length) return;
           const bairro = area.nome || area.completo || "Difícil acesso";
+          const atual = !!(area.id && areasAtuais.has(area.id));
+          const visitada = !!(area.id && areasVisitadas.has(area.id));
+          let legenda = bairro;
+          if (atual) {
+            const quem = (pacote.veiculos || []).filter((v) => v.area_id === area.id).map((v) => v.codigo).filter(Boolean).join(", ");
+            if (quem) legenda = bairro + " · " + quem;
+          }
           nAreas += 1;
           aneis.forEach((anel) => {
             L.polygon(anel, {
               color: "#7c2d12",
-              weight: 4,
+              weight: atual ? 6 : 4,
               opacity: 1,
-              fillColor: "#e07a00",
-              fillOpacity: 0.14,
+              fillColor: atual ? "#1d4ed8" : "#e07a00",
+              fillOpacity: atual ? 0.34 : (visitada ? 0.24 : 0.14),
               pane: "areas-dificil",
               className: "area-dificil",
               interactive: false,
-            }).bindTooltip(bairro, {
+            }).bindTooltip(legenda, {
               permanent: true,
               direction: "center",
               className: "area-dificil-nome",
@@ -4105,6 +4135,7 @@
         folha.dataset.dificilPoligonos = String(nPoligonos);
         folha.dataset.areasPoligonos = String(nAreas);
         folha.dataset.areasCamada = (pacote && pacote.camada) || "";
+        folha.dataset.eventos = String(nEventos);
       }
       enquadrarAreas();
       window.vivoDificil = pacote;
