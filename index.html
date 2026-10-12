@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Sala técnica</title>
+  <title>SEGTRACK</title>
   <script src="config.js"></script>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -47,16 +47,16 @@
     }
     .brand { display: flex; align-items: center; gap: 12px; padding: 0 8px; }
     .marca {
-      width: 42px;
       height: 42px;
+      padding: 0 12px;
       border-radius: 11px;
       background: linear-gradient(160deg, #1aa3aa, #0d6c71);
       color: #fff;
       display: grid;
       place-items: center;
       font-weight: 800;
-      letter-spacing: .4px;
-      font-size: 15px;
+      letter-spacing: .8px;
+      font-size: 13px;
     }
     .brand strong { display: block; color: #fff; font-size: 17px; letter-spacing: -.2px; }
     .brand small { color: #8eacb7; font-size: 12px; }
@@ -1116,9 +1116,8 @@
   <div class="shell">
     <aside class="sidebar">
       <div class="brand">
-        <span class="marca">ST</span>
+        <span class="marca">SEGTRACK</span>
         <div>
-          <strong>Sala técnica</strong>
           <small>Aparecida de Goiânia</small>
         </div>
       </div>
@@ -1139,7 +1138,7 @@
       </nav>
       <div class="sidebar-base">
         <span id="badge" class="badge ok">parado</span>
-        <small>Diurno 06:00–18:59 · Noturno 19:00–05:59 · GPS Segtrack</small>
+        <small>Diurno 06:00–18:59 · Noturno 19:00–05:59 · GPS SEGTRACK</small>
       </div>
     </aside>
     <div class="app">
@@ -1147,7 +1146,7 @@
         <div>
           <p class="kicker" id="kicker-pagina">CCO</p>
           <h1 id="titulo-pagina">Conclusão de Rotas — Ao Vivo</h1>
-          <p class="desc" id="desc-pagina">Segtrack. O painel abre o último estado salvo do turno e continua lendo esse estado em segundo plano.</p>
+          <p class="desc" id="desc-pagina">SEGTRACK. O painel abre o último estado salvo do turno e continua lendo esse estado em segundo plano.</p>
           <p class="hint" id="hint-ciclo-uni">Diurno 06:00–18:59. Noturno a partir das 19:00 até 05:59, com os polígonos do dia e a trajetória dentro deles.</p>
         </div>
         <div class="topbar-lado">
@@ -1224,7 +1223,7 @@
             <button type="button" class="parar" onclick="pararGeracao('log-argos')">Parar</button>
           </div>
           <div class="topbar-acoes barra-segtrack">
-            <button type="button" class="segtrack acao-job" onclick="rodarSegtrack('segtrack-rotas')">Buscar GPS Segtrack</button>
+            <button type="button" class="segtrack acao-job" onclick="rodarSegtrack('segtrack-rotas')">Buscar GPS SEGTRACK</button>
             <div class="menu">
               <button type="button" class="sec acao-job" onclick="toggleMenu(this)">Baixar</button>
               <div class="menu-lista">
@@ -1288,7 +1287,7 @@
     <section class="card">
       <p id="vivo-faixa" class="vivo-faixa">Carregando...</p>
       <div class="vivo-cabeca">
-        <p class="vivo-marca"><strong>SAGTrack</strong><span>Conclusão de Rotas</span></p>
+        <p class="vivo-marca"><strong>SEGTRACK</strong><span>Conclusão de Rotas</span></p>
         <p id="vivo-fase" class="vivo-fase" hidden></p>
       </div>
       <p id="vivo-aviso" class="vivo-aviso" role="status">Carregando o último estado salvo...</p>
@@ -1442,7 +1441,7 @@
       <div class="status" id="status-segtrack"></div>
       <details class="log-caixa">
         <summary>Ver etapas</summary>
-        <div id="log-segtrack">Aguardando comando da Segtrack...</div>
+        <div id="log-segtrack">Aguardando comando da SEGTRACK...</div>
       </details>
     </section>
     <section class="card visor">
@@ -1458,14 +1457,14 @@
       <div id="dias-segtrack" class="dias"></div>
       <div class="vista ativo" data-vista-panel="mapa">
         <p class="hint"><span id="titulo-segtrack">—</span></p>
-        <iframe id="segtrack-mapa" title="Mapa Segtrack"></iframe>
+        <iframe id="segtrack-mapa" title="Mapa SEGTRACK"></iframe>
       </div>
       <div class="vista" data-vista-panel="relatorio">
-        <p class="hint">Relatório Segtrack · <span id="titulo-segtrack-dia">—</span></p>
-        <iframe id="segtrack-diario" title="Relatório Segtrack"></iframe>
+        <p class="hint">Relatório SEGTRACK · <span id="titulo-segtrack-dia">—</span></p>
+        <iframe id="segtrack-diario" title="Relatório SEGTRACK"></iframe>
       </div>
       <div class="vista" data-vista-panel="arquivos">
-        <div id="arquivos-segtrack">Nenhuma extração Segtrack deste dia.</div>
+        <div id="arquivos-segtrack">Nenhuma extração SEGTRACK deste dia.</div>
       </div>
     </section>
   </main>
@@ -1779,8 +1778,8 @@
 
     const paginas = {
       uni: ["Relatório", "Relatório do dia", "Diurno: 06:00–18:59. Noturno: a partir das 19:00 até 05:59. Cada um traz os polígonos do dia e desenha a trajetória dentro deles."],
-      vivo: ["CCO", "Conclusão de Rotas — Ao Vivo", "Segtrack. O painel abre o último estado salvo do turno e continua lendo esse estado em segundo plano."],
-      segtrack: ["GPS", "Segtrack", "Busca o GPS da Segtrack, no dia escolhido no topo."],
+      vivo: ["CCO", "Conclusão de Rotas — Ao Vivo", "SEGTRACK. O painel abre o último estado salvo do turno e continua lendo esse estado em segundo plano."],
+      segtrack: ["GPS", "SEGTRACK", "Busca o GPS da SEGTRACK, no dia escolhido no topo."],
       inlog: ["GPS", "Inlog", "Busca o GPS da Inlog e mantém PDF e GPKG."],
       argos: ["GPS", "Argos", "Busca o GPS da Argos e mantém PDF e GPKG."],
     };
@@ -2347,7 +2346,7 @@
         const nome = r.setor || r.codigo || "Rota";
         const extra = [r.placa && r.placa !== "—" ? r.placa : "", r.horario || ""].filter(Boolean).join(" · ");
         const codigo = String(r.codigo || "").replace(/"/g, "");
-        return `<button type="button" class="rota-card ${cls}" data-codigo="${codigo}"><div><b class="pct">${r.percentual || "0%"}</b><span class="estado">${r.status || "—"}</span></div><div><strong>${nome}</strong><small>${extra || "Segtrack"}</small></div></button>`;
+        return `<button type="button" class="rota-card ${cls}" data-codigo="${codigo}"><div><b class="pct">${r.percentual || "0%"}</b><span class="estado">${r.status || "—"}</span></div><div><strong>${nome}</strong><small>${extra || "SEGTRACK"}</small></div></button>`;
       }).join("");
     }
 
@@ -2393,7 +2392,7 @@
         <span>Parciais: <b>${info.unificado_tem_coleta ? (info.unificado_parciais ?? "-") : "-"}</b></span>
         <span>Apoios: <b>${info.unificado_tem_coleta ? (info.unificado_apoios ?? "-") : "-"}</b></span>
         <span>Sem coleta: <b>${info.unificado_tem_coleta ? (info.unificado_nao_feitas ?? "-") : "-"}</b></span>
-        <span>GPS: <b>Segtrack ${fontes.segtrack || (info.segtrack_tem_coleta ? "ok" : "—")}</b></span>
+        <span>GPS: <b>SEGTRACK ${fontes.segtrack || (info.segtrack_tem_coleta ? "ok" : "—")}</b></span>
       `);
       pintarRotas(info.unificado_rotas || []);
       $("titulo-dia").textContent = cicloInlog;
@@ -2442,7 +2441,7 @@
       `);
       setHtml("status-segtrack", `
         <span>Usuário: <b>${info.segtrack_usuario || "preencha o .env"}</b></span>
-        <span>Obra: <b>${info.segtrack_obra || "Aparecida — Segtrack"}</b></span>
+        <span>Obra: <b>${info.segtrack_obra || "Aparecida — SEGTRACK"}</b></span>
         <span>Filtro: <b>${info.segtrack_placas || "compactadores em Aparecida"}</b></span>
         <span>Ciclo: <b>${cicloSeg}</b></span>
         <span>Caminhões: <b>${info.segtrack_tem_coleta ? (info.segtrack_veiculos ?? "-") : "ainda não extraído"}</b></span>
@@ -2523,14 +2522,14 @@
         info.segtrack_diario_url,
         info.segtrack_diario_rev,
         info.job?.nome === "segtrack-rotas" && info.job?.rodando
-          ? "Extraindo o percurso da Segtrack..."
-          : "Ainda não há extração da Segtrack neste dia."
+          ? "Extraindo o percurso da SEGTRACK..."
+          : "Ainda não há extração da SEGTRACK neste dia."
       );
       mostrarIframe(
         "segtrack-mapa",
         info.segtrack_mapa_url,
         info.segtrack_mapa_rev,
-        "Sem mapa Segtrack deste dia ainda."
+        "Sem mapa SEGTRACK deste dia ainda."
       );
       setHtml("arquivos", info.arquivos?.length
         ? info.arquivos.map((a) => `<div><a href="${urlApi(a.url)}" target="_blank">${a.nome}</a></div>`).join("")
@@ -2540,7 +2539,7 @@
         : "Nenhuma extração Argos deste dia.");
       setHtml("arquivos-segtrack", info.segtrack_arquivos?.length
         ? info.segtrack_arquivos.map((a) => `<div><a href="${urlApi(a.url)}" target="_blank">${a.nome}</a></div>`).join("")
-        : "Nenhuma extração Segtrack deste dia.");
+        : "Nenhuma extração SEGTRACK deste dia.");
       setHtml("arquivos-uni", info.unificado_arquivos?.length
         ? info.unificado_arquivos.map((a) => `<div><a href="${urlApi(a.url)}" target="_blank">${a.nome}</a></div>`).join("")
         : "Nenhum relatório único deste dia ainda.");
@@ -2899,7 +2898,7 @@
       }
       const btn = $("btn-gpkg-segtrack");
       btn.disabled = true;
-      $("log-segtrack").textContent = "Gerando GeoPackage Segtrack de " + fmtDia(data) + "...";
+      $("log-segtrack").textContent = "Gerando GeoPackage SEGTRACK de " + fmtDia(data) + "...";
       try {
         const res = await fetchGeracao("/api/gpkg-segtrack?data=" + encodeURIComponent(data));
         if (!res.ok) {
@@ -2925,17 +2924,17 @@
     async function baixarPdfSegtrack() {
       const data = $("data-segtrack").value;
       if (!data) {
-        $("log-segtrack").textContent = "Escolha o dia do relatório Segtrack.";
+        $("log-segtrack").textContent = "Escolha o dia do relatório SEGTRACK.";
         return;
       }
       const btn = $("btn-pdf-segtrack");
       btn.disabled = true;
-      $("log-segtrack").textContent = "Gerando PDF Segtrack de " + fmtDia(data) + " com mapa e grade...";
+      $("log-segtrack").textContent = "Gerando PDF SEGTRACK de " + fmtDia(data) + " com mapa e grade...";
       try {
         const res = await fetchGeracao("/api/pdf-segtrack?data=" + encodeURIComponent(data));
         if (!res.ok) {
-          const erro = await res.json().catch(() => ({ erro: "Falha ao gerar PDF Segtrack" }));
-          throw new Error(erro.erro || "Falha ao gerar PDF Segtrack");
+          const erro = await res.json().catch(() => ({ erro: "Falha ao gerar PDF SEGTRACK" }));
+          throw new Error(erro.erro || "Falha ao gerar PDF SEGTRACK");
         }
         const blob = await res.blob();
         const url = URL.createObjectURL(blob);
@@ -4759,7 +4758,7 @@
         const rotulo = turno === "diurno" ? "Diurno" : "Noturno";
         const link = document.createElement("a");
         link.href = URL.createObjectURL(blob);
-        link.download = achou ? achou[1] : ("SAGTrack_Relatorio_Operacao_" + data + "_" + rotulo + ".pdf");
+        link.download = achou ? achou[1] : ("SEGTRACK_Relatorio_Operacao_" + data + "_" + rotulo + ".pdf");
         link.click();
         setTimeout(() => URL.revokeObjectURL(link.href), 4000);
         if (aviso) { aviso.classList.remove("erro"); aviso.hidden = false; aviso.textContent = "Relatório gerado"; }
