@@ -4018,18 +4018,14 @@
       if (!vivoGrupoDificil) return;
       vivoGrupoDificil.clearLayers();
       if (vivoGrupoAreas) vivoGrupoAreas.clearLayers();
-      const traco = { pane: "dificil", smoothFactor: 0, lineCap: "round", lineJoin: "round" };
-      const estilos = {
-        trajeto: Object.assign({ color: "#1d4ed8", weight: 5, opacity: 0.95 }, traco),
-        na_rota: Object.assign({ color: "#1d4ed8", weight: 5, opacity: 0.95 }, traco),
-        deslocamento: Object.assign({ color: "#5c6b73", weight: 4, opacity: 0.9, dashArray: "6 6" }, traco),
-        dificil: Object.assign({ color: "#e07a00", weight: 5, opacity: 0.95 }, traco),
-      };
-      const rotulos = {
-        trajeto: "trajetória GPS",
-        na_rota: "na rota oficial",
-        deslocamento: "deslocamento",
-        dificil: "difícil acesso",
+      const tracoInterno = {
+        color: "#17324d",
+        weight: 3,
+        opacity: 0.85,
+        pane: "dificil",
+        smoothFactor: 0,
+        lineCap: "round",
+        lineJoin: "round",
       };
       function pontosDaLinha(linha) {
         const pontos = [];
@@ -4057,15 +4053,11 @@
         const nome = (veiculo.codigo || "") + " · " + (veiculo.placa || "");
         if (veiculo.area_id) areasAtuais.add(veiculo.area_id);
         (veiculo.eventos || []).forEach((ev) => { if (ev && ev.area_id) areasVisitadas.add(ev.area_id); });
-        const temTrajeto = Object.prototype.hasOwnProperty.call(veiculo, "trajeto");
-        const tipos = temTrajeto ? ["trajeto"] : ["na_rota", "deslocamento", "dificil"];
-        tipos.forEach((tipo) => {
-          (veiculo[tipo] || []).forEach((linha) => {
-            const pontos = pontosDaLinha(linha);
-            if (pontos.length < 2) return;
-            if (tipo === "trajeto") nTrajeto += 1;
-            L.polyline(pontos, estilos[tipo]).bindTooltip(nome + " · " + rotulos[tipo], { sticky: true }).addTo(vivoGrupoDificil);
-          });
+        (veiculo.trechos_internos || []).forEach((linha) => {
+          const pontos = pontosDaLinha(linha);
+          if (pontos.length < 2) return;
+          nTrajeto += 1;
+          L.polyline(pontos, tracoInterno).bindTooltip(nome + " · na área oficial", { sticky: true }).addTo(vivoGrupoDificil);
         });
         (veiculo.poligonos || []).forEach((anel) => {
           const pontos = pontosDaLinha(anel);
