@@ -1110,9 +1110,90 @@
       .vivo-ficha-acoes { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
       .vivo-fechar-ficha { margin-top: 8px; }
     }
+    body.auth-pendente .shell,
+    body.auth-pendente .nav-app,
+    body.auth-pendente .painel-mais,
+    body.auth-pendente .operacao-painel,
+    body.auth-login .shell,
+    body.auth-login .nav-app,
+    body.auth-login .painel-mais,
+    body.auth-login .operacao-painel { display: none !important; }
+    .tela-acesso {
+      min-height: 100dvh;
+      display: none;
+      place-items: center;
+      padding: 24px 16px;
+      background:
+        radial-gradient(900px 420px at 10% -10%, rgba(15, 122, 128, .35), transparent 60%),
+        linear-gradient(165deg, #0c1820 0%, #12232e 55%, #0f7a80 140%);
+    }
+    body.auth-pendente .tela-acesso,
+    body.auth-login .tela-acesso { display: grid; }
+    .acesso-card {
+      width: min(420px, 100%);
+      display: none;
+      gap: 14px;
+      margin: 0;
+      padding: 28px 22px 22px;
+      border-radius: 18px;
+      background: #fff;
+      box-shadow: 0 16px 40px rgba(8, 18, 24, .28);
+    }
+    body.auth-login .acesso-card { display: grid; }
+    .acesso-marca { margin: 0; color: var(--navy); font-size: 28px; line-height: 1.05; letter-spacing: -.4px; }
+    .acesso-marca span { color: var(--teal); }
+    .acesso-sub { margin: -6px 0 0; color: var(--muted); font-size: 14px; }
+    .acesso-card label { display: grid; gap: 6px; color: var(--navy); font-size: 13px; font-weight: 700; }
+    .acesso-card .campo { width: 100%; min-height: 48px; font-size: 16px; }
+    .acesso-senha { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; }
+    .acesso-senha .sec { min-height: 48px; }
+    .acesso-card .principal { min-height: 48px; font-size: 16px; }
+    .acesso-erro { margin: 0; color: var(--err); font-size: 14px; font-weight: 650; }
+    .acesso-erro:empty { display: none; }
+    .acesso-espera { margin: 0; color: #fff; font-size: 16px; font-weight: 700; }
+    body.auth-login .acesso-espera { display: none; }
+    .acesso-quem { margin: 0; color: #d7e4ea; font-size: 13px; }
+    #btn-sair { width: 100%; background: transparent; color: #d7e4ea; border: 1px solid #245261; }
+    .admin-grade { display: grid; gap: 12px; }
+    .admin-form { display: grid; gap: 10px; }
+    .admin-form .campo, .admin-form select { width: 100%; min-height: 44px; }
+    .admin-acoes { display: flex; flex-wrap: wrap; gap: 8px; }
+    .admin-tabela { width: 100%; border-collapse: collapse; font-size: 14px; }
+    .admin-tabela th, .admin-tabela td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    .admin-tabela th { color: var(--muted); font-size: 11px; letter-spacing: .3px; text-transform: uppercase; }
+    .admin-tabela .sec { margin: 0 6px 6px 0; }
+    .presenca-ativo { color: var(--ok); font-weight: 800; }
+    .presenca-sessao { color: var(--warn); font-weight: 800; }
+    .presenca-off { color: var(--muted); font-weight: 700; }
+    .admin-nota { margin: 0; color: var(--muted); font-size: 13px; }
+    @media (max-width: 720px) {
+      .acesso-senha { grid-template-columns: 1fr; }
+      .admin-tabela thead { display: none; }
+      .admin-tabela tr { display: grid; gap: 2px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+      .admin-tabela td { border: 0; padding: 2px 0; }
+      .admin-tabela td::before { content: attr(data-rotulo); display: block; color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .3px; text-transform: uppercase; }
+    }
   </style>
 </head>
-<body data-pagina="vivo">
+<body data-pagina="vivo" class="auth-pendente">
+  <div id="tela-acesso" class="tela-acesso">
+    <p id="acesso-espera" class="acesso-espera">Carregando…</p>
+    <form id="acesso-form" class="acesso-card" autocomplete="on">
+      <h1 class="acesso-marca">ROTA <span>AO VIVO</span></h1>
+      <p class="acesso-sub">Conclusão de rotas · Aparecida de Goiânia</p>
+      <label>Usuário ou e-mail
+        <input class="campo" id="acesso-login" name="username" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" required />
+      </label>
+      <label>Senha
+        <span class="acesso-senha">
+          <input class="campo" id="acesso-senha" name="password" type="password" autocomplete="current-password" required />
+          <button type="button" class="sec" id="acesso-ver" aria-pressed="false">Mostrar senha</button>
+        </span>
+      </label>
+      <p id="acesso-erro" class="acesso-erro" role="alert"></p>
+      <button type="submit" class="principal" id="acesso-entrar">Entrar</button>
+    </form>
+  </div>
   <div class="shell">
     <aside class="sidebar">
       <div class="brand">
@@ -1123,6 +1204,7 @@
       </div>
       <nav class="tabs">
         <button type="button" id="tab-vivo" class="nav-item ativo" onclick="mostrarAba('vivo')">Ao vivo</button>
+        <button type="button" id="tab-admin" class="nav-item" hidden onclick="mostrarAba('admin')">Administração</button>
         <p class="nav-grupo">Uma rota</p>
         <div class="sidebar-rota" style="padding:0; gap:8px;">
           <select id="filtro-rota" class="campo-side" title="Rotas da grade do dia">
@@ -1139,6 +1221,8 @@
       <div class="sidebar-base">
         <span id="badge" class="badge ok">parado</span>
         <small>Diurno 06:00–18:59 · Noturno 19:00–05:59 · GPS SEGTRACK</small>
+        <p id="acesso-quem" class="acesso-quem" hidden></p>
+        <button type="button" id="btn-sair" hidden>Sair</button>
       </div>
     </aside>
     <div class="app">
@@ -1370,6 +1454,70 @@
     <div id="vivo-cortina" class="vivo-cortina" hidden></div>
   </main>
 
+  <main id="aba-admin" class="painel" hidden>
+    <section class="card admin-grade">
+      <h2>Usuários</h2>
+      <p class="admin-nota">Cadastre operadores e administradores. Não há cadastro público. Ativo agora significa uso recente do painel; sessão aberta é quem ainda pode entrar, mas não está usando neste momento.</p>
+      <p id="admin-erro" class="acesso-erro" role="alert"></p>
+      <form id="admin-form" class="admin-form" autocomplete="off">
+        <input type="hidden" id="usuario-id" value="" />
+        <label>Nome
+          <input class="campo" id="usuario-nome" type="text" maxlength="80" required />
+        </label>
+        <label>Usuário ou e-mail
+          <input class="campo" id="usuario-login" type="text" autocapitalize="none" spellcheck="false" maxlength="120" required />
+        </label>
+        <label>Senha
+          <input class="campo" id="usuario-senha" type="password" autocomplete="new-password" />
+        </label>
+        <label>Perfil
+          <select class="campo" id="usuario-perfil">
+            <option value="operador">Operador</option>
+            <option value="admin">Administrador</option>
+          </select>
+        </label>
+        <div class="admin-acoes">
+          <button type="submit" class="principal" id="usuario-salvar">Cadastrar</button>
+          <button type="button" class="sec" id="usuario-limpar">Limpar</button>
+        </div>
+        <p class="admin-nota" id="usuario-dica">A senha precisa ter pelo menos 10 caracteres.</p>
+      </form>
+      <div style="overflow:auto">
+        <table class="admin-tabela">
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>Acesso</th>
+              <th>Perfil</th>
+              <th>Situação</th>
+              <th>Presença</th>
+              <th>Último acesso</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="admin-lista"></tbody>
+        </table>
+      </div>
+    </section>
+    <section class="card">
+      <h2>Histórico de acesso</h2>
+      <p class="admin-nota">Entradas, saídas e tentativas. Senhas e sessões não aparecem aqui.</p>
+      <div style="overflow:auto">
+        <table class="admin-tabela">
+          <thead>
+            <tr>
+              <th>Quando</th>
+              <th>Evento</th>
+              <th>Usuário</th>
+              <th>Origem</th>
+            </tr>
+          </thead>
+          <tbody id="admin-auditoria"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
   <main id="aba-inlog" class="painel">
     <section class="card">
       <div class="status" id="status"></div>
@@ -1490,12 +1638,14 @@
   </nav>
   <div id="painel-mais" class="painel-mais" hidden>
     <h2>Relatórios e ferramentas</h2>
+    <button type="button" id="mais-admin" data-ir="admin" hidden>Administração</button>
     <button type="button" id="mais-operacao">Relatório da operação</button>
     <h2 class="mais-separa">Turno</h2>
     <button type="button" id="mais-pausa" title="Pausa só a atualização desta tela. A sincronização do servidor continua.">Pausar tela</button>
     <p class="mais-nota">Pausa só esta tela. O servidor continua sincronizando.</p>
     <button type="button" class="perigo" id="mais-encerrar" hidden>Encerrar turno</button>
     <button type="button" id="mais-reabrir" hidden>Reabrir turno</button>
+    <button type="button" class="perigo" id="btn-sair-mais" hidden>Sair</button>
   </div>
   <div id="operacao-painel" class="operacao-painel" hidden>
     <div class="operacao-caixa" role="dialog" aria-labelledby="operacao-titulo">
@@ -1510,14 +1660,35 @@
 
     <script>
     const API_BASE = String(window.SAGTRACK_API || "").replace(/\/$/, "");
+    function noSitePublicado() {
+      return location.protocol === "https:" && /(^|\.)vercel\.app$/i.test(location.hostname || "");
+    }
     function urlApi(path) {
       const texto = String(path || "");
-      if (!API_BASE || !texto || /^(https?:|blob:|data:)/i.test(texto)) return texto;
+      if (!texto || /^(blob:|data:)/i.test(texto)) return texto;
+      if (noSitePublicado()) {
+        if (texto.startsWith("/api/") || texto.startsWith("/arquivos/")) return texto;
+        if (API_BASE && texto.startsWith(API_BASE)) {
+          const resto = texto.slice(API_BASE.length);
+          if (resto.startsWith("/api/") || resto.startsWith("/arquivos/")) return resto;
+        }
+      }
+      if (/^https?:/i.test(texto)) return texto;
+      if (!API_BASE) return texto;
       if (texto.startsWith("/")) return API_BASE + texto;
       return texto;
     }
     const fetchOriginal = window.fetch.bind(window);
-    window.fetch = (input, init) => fetchOriginal(typeof input === "string" ? urlApi(input) : input, init);
+    let sessaoUsuario = null;
+    let csrfToken = "";
+    window.fetch = (input, init) => {
+      const opts = Object.assign({ credentials: "include" }, init || {});
+      const headers = new Headers(opts.headers || {});
+      const metodo = String(opts.method || "GET").toUpperCase();
+      if (csrfToken && metodo !== "GET" && metodo !== "HEAD") headers.set("X-CSRF-Token", csrfToken);
+      opts.headers = headers;
+      return fetchOriginal(typeof input === "string" ? urlApi(input) : input, opts);
+    };
     const $ = (id) => document.getElementById(id);
     let pedindoDia = "";
     let pedindoArgos = "";
@@ -1778,6 +1949,7 @@
 
     const paginas = {
       uni: ["Relatório", "Relatório do dia", "Diurno: 06:00–18:59. Noturno: a partir das 19:00 até 05:59. Cada um traz os polígonos do dia e desenha a trajetória dentro deles."],
+      admin: ["Administração", "Usuários", "Cadastre, edite, ative e bloqueie o acesso. Somente administradores."],
       vivo: ["CCO", "Conclusão de Rotas — Ao Vivo", "SEGTRACK. O painel abre o último estado salvo do turno e continua lendo esse estado em segundo plano."],
       segtrack: ["GPS", "SEGTRACK", "Busca o GPS da SEGTRACK, no dia escolhido no topo."],
       inlog: ["GPS", "Inlog", "Busca o GPS da Inlog e mantém PDF e GPKG."],
@@ -1801,11 +1973,12 @@
     }
 
     function mostrarAba(nome) {
-      if (nome !== "uni" && nome !== "segtrack" && nome !== "vivo" && nome !== "inlog" && nome !== "argos") nome = "uni";
+      if (nome === "admin" && (!sessaoUsuario || sessaoUsuario.perfil !== "admin")) nome = "vivo";
+      if (nome !== "uni" && nome !== "segtrack" && nome !== "vivo" && nome !== "inlog" && nome !== "argos" && nome !== "admin") nome = "uni";
       aba = nome;
       document.body.dataset.pagina = nome;
       fecharMais();
-      ["uni", "inlog", "argos", "segtrack", "vivo"].forEach((id) => {
+      ["uni", "inlog", "argos", "segtrack", "vivo", "admin"].forEach((id) => {
         const el = $("aba-" + id);
         if (!el) return;
         const on = nome === id;
@@ -1816,6 +1989,8 @@
       if (tabUni) tabUni.className = nome === "uni" ? "nav-item ativo" : "nav-item";
       const tabVivo = $("tab-vivo");
       if (tabVivo) tabVivo.className = nome === "vivo" ? "nav-item ativo" : "nav-item";
+      const tabAdmin = $("tab-admin");
+      if (tabAdmin) tabAdmin.className = nome === "admin" ? "nav-item ativo" : "nav-item";
       const navAtual = nome === "vivo" ? "vivo" : nome === "uni" ? "uni" : "mais";
       document.querySelectorAll(".nav-app button[data-nav]").forEach((botao) => {
         const on = botao.dataset.nav === navAtual;
@@ -1834,6 +2009,7 @@
       if ($("desc-pagina")) $("desc-pagina").textContent = pagina[2];
       if (nome === "segtrack") carregarDiaSegtrack(false);
       if (nome === "uni") atualizar();
+      if (nome === "admin") carregarAdmin();
       if (nome === "vivo") iniciarVivo();
       else pararRelogioVivo();
     }
@@ -2113,6 +2289,11 @@
         throw new Error(erroPainel(e));
       }
       const data = await res.json().catch(() => ({}));
+      if (res.status === 401) {
+        const msg = data.erro || "Faça login para continuar.";
+        if (document.body.classList.contains("auth-ok")) mostrarLogin(msg);
+        throw new Error(msg);
+      }
       if (!res.ok) throw new Error(data.erro || "Falha na API");
       return data;
     }
@@ -2214,7 +2395,7 @@
           linkPdf.href = pdfHref;
           linkPdf.hidden = false;
         }
-        if (querPdf) window.open(pdfHref, "_blank", "noopener");
+        if (querPdf) baixarComSessao(pdfHref).catch((e) => { $("rota-info").textContent = e.message; });
         $("rota-info").textContent =
           (info.codigo || codigo) + " · " + (info.percentual || 0) + "% · PDF do ciclo 06:00 → 05:59.";
       }
@@ -3098,8 +3279,6 @@
         abrirRotaLista(card.dataset.codigo);
       });
     }
-    carregarRotasDoDia();
-    carregarDia(false);
     function agendarStatus(ms) {
       clearTimeout(agendarStatus.t);
       agendarStatus.t = setTimeout(() => {
@@ -3111,9 +3290,6 @@
         });
       }, ms);
     }
-    agendarStatus(2500);
-    carregarChatbot();
-
     const VIVO_LEITURA_MS = 10000;
     let vivoEstado = null;
     let vivoGrupo = "todas";
@@ -4773,7 +4949,341 @@
     if (maisEncerrarBtn) maisEncerrarBtn.addEventListener("click", () => { const real = $("btn-vivo-encerrar"); if (real) real.click(); });
     const maisReabrirBtn = $("mais-reabrir");
     if (maisReabrirBtn) maisReabrirBtn.addEventListener("click", () => { const real = $("btn-vivo-reabrir"); if (real) real.click(); });
-    mostrarAba("vivo");
+    function escHtml(valor) {
+      return String(valor ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    }
+
+    function iniciarPainel() {
+      if (iniciarPainel.feito) {
+        mostrarAba(aba === "admin" && sessaoUsuario && sessaoUsuario.perfil === "admin" ? "admin" : "vivo");
+        return;
+      }
+      iniciarPainel.feito = true;
+      carregarRotasDoDia();
+      carregarDia(false);
+      agendarStatus(2500);
+      carregarChatbot();
+      mostrarAba("vivo");
+    }
+
+    function mostrarLogin(mensagem) {
+      if (typeof pararRelogioVivo === "function") pararRelogioVivo();
+      if (agendarStatus.t) clearTimeout(agendarStatus.t);
+      sessaoUsuario = null;
+      document.body.classList.remove("auth-pendente", "auth-ok");
+      document.body.classList.add("auth-login");
+      document.title = "ROTA AO VIVO";
+      const erro = $("acesso-erro");
+      if (erro) erro.textContent = mensagem || "";
+      const botao = $("acesso-entrar");
+      if (botao) {
+        botao.disabled = false;
+        botao.textContent = "Entrar";
+      }
+      const campo = $("acesso-login");
+      if (campo) campo.focus();
+    }
+
+    function aplicarUsuario(usuario) {
+      sessaoUsuario = usuario || null;
+      const admin = !!(usuario && usuario.perfil === "admin");
+      if ($("tab-admin")) $("tab-admin").hidden = !admin;
+      if ($("mais-admin")) $("mais-admin").hidden = !admin;
+      const entrou = !!usuario;
+      if ($("btn-sair")) $("btn-sair").hidden = !entrou;
+      if ($("btn-sair-mais")) $("btn-sair-mais").hidden = !entrou;
+      const quem = $("acesso-quem");
+      if (quem) {
+        quem.hidden = !entrou;
+        quem.textContent = entrou ? (usuario.nome || usuario.login) + " · " + (admin ? "Administrador" : "Operador") : "";
+      }
+    }
+
+    function entrarNoSistema(usuario) {
+      aplicarUsuario(usuario);
+      document.body.classList.remove("auth-pendente", "auth-login");
+      document.body.classList.add("auth-ok");
+      document.title = "SEGTRACK";
+      iniciarPainel();
+    }
+
+    function liberarSemLogin() {
+      aplicarUsuario(null);
+      document.body.classList.remove("auth-pendente", "auth-login");
+      document.body.classList.add("auth-ok");
+      document.title = "SEGTRACK";
+      iniciarPainel();
+    }
+
+    async function sair() {
+      try {
+        await fetch("/api/auth/logout", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: "{}",
+        });
+      } catch (e) { /* a tela de login abre mesmo se a rede falhar */ }
+      csrfToken = "";
+      mostrarLogin("");
+    }
+
+    async function prepararAcesso() {
+      try {
+        const res = await fetch("/api/auth/sessao", { cache: "no-store" });
+        if (res.status === 404) {
+          liberarSemLogin();
+          return;
+        }
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && data.usuario) {
+          csrfToken = data.csrf || "";
+          entrarNoSistema(data.usuario);
+          return;
+        }
+        if (res.ok && data.exigida === false) {
+          liberarSemLogin();
+          return;
+        }
+        mostrarLogin(res.ok ? "" : (data.erro || ""));
+      } catch (e) {
+        mostrarLogin("Não foi possível falar com o servidor. Espere alguns segundos e tente de novo.");
+      }
+    }
+
+    async function baixarComSessao(url) {
+      const resp = await fetch(url, { cache: "no-store" });
+      if (!resp.ok) {
+        let msg = "Não foi possível baixar o arquivo.";
+        try {
+          const corpo = await resp.json();
+          if (corpo && corpo.erro) msg = corpo.erro;
+        } catch (erro) { /* resposta sem JSON */ }
+        throw new Error(msg);
+      }
+      const blob = await resp.blob();
+      const obj = URL.createObjectURL(blob);
+      const aberto = window.open(obj, "_blank", "noopener");
+      if (!aberto) {
+        const link = document.createElement("a");
+        link.href = obj;
+        link.download = "rota-ao-vivo";
+        link.click();
+      }
+      setTimeout(() => URL.revokeObjectURL(obj), 60000);
+    }
+
+    const rotuloPresenca = {
+      ativo_agora: "Ativo agora",
+      sessao_aberta: "Sessão aberta",
+      sem_sessao: "Sem sessão",
+    };
+
+    let usuariosCache = [];
+
+    function limparUsuario() {
+      $("usuario-id").value = "";
+      $("usuario-nome").value = "";
+      $("usuario-login").value = "";
+      $("usuario-senha").value = "";
+      $("usuario-perfil").value = "operador";
+      $("usuario-salvar").textContent = "Cadastrar";
+      $("usuario-dica").textContent = "A senha precisa ter pelo menos 10 caracteres.";
+    }
+
+    function pintarUsuarios(lista) {
+      usuariosCache = lista || [];
+      const corpo = $("admin-lista");
+      if (!corpo) return;
+      corpo.innerHTML = usuariosCache.map((u) => {
+        const presenca = rotuloPresenca[u.presenca] || "Sem sessão";
+        const classe = u.presenca === "ativo_agora" ? "presenca-ativo" : (u.presenca === "sessao_aberta" ? "presenca-sessao" : "presenca-off");
+        const acao = u.ativo
+          ? `<button type="button" class="sec" data-acao="bloquear" data-id="${u.id}">Bloquear</button>`
+          : `<button type="button" class="sec" data-acao="ativar" data-id="${u.id}">Ativar</button>`;
+        return `<tr>
+          <td data-rotulo="Nome">${escHtml(u.nome)}</td>
+          <td data-rotulo="Acesso">${escHtml(u.login)}</td>
+          <td data-rotulo="Perfil">${escHtml(u.perfil_rotulo || u.perfil)}</td>
+          <td data-rotulo="Situação">${u.ativo ? "Ativo" : "Bloqueado"}</td>
+          <td data-rotulo="Presença" class="${classe}">${escHtml(presenca)}${u.sessoes_ativas ? " · " + u.sessoes_ativas + (u.sessoes_ativas === 1 ? " sessão" : " sessões") : ""}</td>
+          <td data-rotulo="Último acesso">${escHtml(u.ultimo_acesso || "—")}<br><small>Login ${escHtml(u.ultimo_login || "—")}</small></td>
+          <td data-rotulo="Ações"><button type="button" class="sec" data-acao="editar" data-id="${u.id}">Editar</button>${acao}</td>
+        </tr>`;
+      }).join("") || `<tr><td colspan="7">Nenhum usuário cadastrado.</td></tr>`;
+    }
+
+    function pintarAuditoria(eventos) {
+      const corpo = $("admin-auditoria");
+      if (!corpo) return;
+      corpo.innerHTML = (eventos || []).map((ev) => `<tr>
+        <td data-rotulo="Quando">${escHtml(ev.quando)}</td>
+        <td data-rotulo="Evento">${escHtml(ev.rotulo || ev.tipo)}</td>
+        <td data-rotulo="Usuário">${escHtml(ev.login)}</td>
+        <td data-rotulo="Origem">${escHtml(ev.ip || "—")}</td>
+      </tr>`).join("") || `<tr><td colspan="4">Nenhum acesso registrado.</td></tr>`;
+    }
+
+    async function carregarAdmin() {
+      if (!sessaoUsuario || sessaoUsuario.perfil !== "admin") return;
+      const erro = $("admin-erro");
+      try {
+        const [usuarios, auditoria] = await Promise.all([
+          api("/api/auth/usuarios"),
+          api("/api/auth/auditoria"),
+        ]);
+        pintarUsuarios(usuarios.usuarios || []);
+        pintarAuditoria(auditoria.eventos || []);
+        if (erro) erro.textContent = "";
+      } catch (e) {
+        if (erro) erro.textContent = e.message;
+      }
+    }
+
+    const verSenha = $("acesso-ver");
+    if (verSenha) {
+      verSenha.addEventListener("click", () => {
+        const campo = $("acesso-senha");
+        const mostrar = campo.type === "password";
+        campo.type = mostrar ? "text" : "password";
+        verSenha.textContent = mostrar ? "Ocultar senha" : "Mostrar senha";
+        verSenha.setAttribute("aria-pressed", mostrar ? "true" : "false");
+      });
+    }
+    const formAcesso = $("acesso-form");
+    if (formAcesso) {
+      formAcesso.addEventListener("submit", async (ev) => {
+        ev.preventDefault();
+        const erro = $("acesso-erro");
+        const login = ($("acesso-login").value || "").trim();
+        const senha = $("acesso-senha").value || "";
+        if (!login) {
+          erro.textContent = "Informe o usuário ou e-mail.";
+          return;
+        }
+        if (!senha) {
+          erro.textContent = "Informe a senha.";
+          return;
+        }
+        const botao = $("acesso-entrar");
+        botao.disabled = true;
+        botao.textContent = "Entrando…";
+        erro.textContent = "";
+        try {
+          const res = await fetch("/api/auth/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ login, senha }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            erro.textContent = data.erro || "Não foi possível entrar.";
+            botao.disabled = false;
+            botao.textContent = "Entrar";
+            return;
+          }
+          csrfToken = data.csrf || "";
+          $("acesso-senha").value = "";
+          entrarNoSistema(data.usuario);
+        } catch (e) {
+          erro.textContent = "Não foi possível falar com o servidor. Espere alguns segundos e tente de novo.";
+          botao.disabled = false;
+          botao.textContent = "Entrar";
+        }
+      });
+    }
+    const sairBtn = $("btn-sair");
+    if (sairBtn) sairBtn.addEventListener("click", () => sair());
+    const sairMais = $("btn-sair-mais");
+    if (sairMais) sairMais.addEventListener("click", () => sair());
+    const formUsuario = $("admin-form");
+    if (formUsuario) {
+      formUsuario.addEventListener("submit", async (ev) => {
+        ev.preventDefault();
+        const erro = $("admin-erro");
+        const id = $("usuario-id").value;
+        const corpo = {
+          nome: $("usuario-nome").value.trim(),
+          login: $("usuario-login").value.trim(),
+          senha: $("usuario-senha").value,
+          perfil: $("usuario-perfil").value,
+        };
+        if (!corpo.nome || !corpo.login) {
+          erro.textContent = "Informe nome e usuário.";
+          return;
+        }
+        if (!id && corpo.senha.length < 10) {
+          erro.textContent = "A senha precisa ter pelo menos 10 caracteres.";
+          return;
+        }
+        try {
+          const path = id ? "/api/auth/usuarios/editar" : "/api/auth/usuarios";
+          const salvo = await api(path, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(id ? Object.assign({ id: Number(id) }, corpo) : corpo),
+          });
+          if (salvo.usuario && salvo.usuario.encerrou_propria_sessao) {
+            csrfToken = "";
+            mostrarLogin("Seus dados mudaram. Entre novamente.");
+            return;
+          }
+          limparUsuario();
+          await carregarAdmin();
+        } catch (e) {
+          erro.textContent = e.message;
+        }
+      });
+    }
+    const limparBtn = $("usuario-limpar");
+    if (limparBtn) limparBtn.addEventListener("click", () => limparUsuario());
+    const listaAdmin = $("admin-lista");
+    if (listaAdmin) {
+      listaAdmin.addEventListener("click", async (ev) => {
+        const botao = ev.target.closest("button[data-acao]");
+        if (!botao) return;
+        const id = Number(botao.dataset.id);
+        const usuario = usuariosCache.find((item) => item.id === id);
+        if (!usuario) return;
+        if (botao.dataset.acao === "editar") {
+          $("usuario-id").value = String(usuario.id);
+          $("usuario-nome").value = usuario.nome || "";
+          $("usuario-login").value = usuario.login || "";
+          $("usuario-senha").value = "";
+          $("usuario-perfil").value = usuario.perfil === "admin" ? "admin" : "operador";
+          $("usuario-salvar").textContent = "Salvar";
+          $("usuario-dica").textContent = "Deixe a senha em branco para mantê-la.";
+          $("usuario-nome").focus();
+          return;
+        }
+        const bloquear = botao.dataset.acao === "bloquear";
+        const frase = bloquear
+          ? "Bloquear " + (usuario.nome || usuario.login) + "?"
+          : "Ativar " + (usuario.nome || usuario.login) + "?";
+        if (!window.confirm(frase)) return;
+        try {
+          await api("/api/auth/usuarios/" + (bloquear ? "bloquear" : "ativar"), {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id }),
+          });
+          await carregarAdmin();
+        } catch (e) {
+          $("admin-erro").textContent = e.message;
+        }
+      });
+    }
+    document.addEventListener("click", (ev) => {
+      const link = ev.target.closest && ev.target.closest("a[href]");
+      const href = link.getAttribute("href") || "";
+      if (!href || href.charAt(0) === "#") return;
+      const absoluto = urlApi(href);
+      const mesmoSite = absoluto.startsWith("/api/") || absoluto.startsWith("/arquivos/");
+      const noBackend = !!API_BASE && absoluto.startsWith(API_BASE) && /\/api\/|\/arquivos\//.test(absoluto);
+      if (!mesmoSite && !noBackend) return;
+      ev.preventDefault();
+      baixarComSessao(absoluto).catch((e) => alert(e.message || "Não foi possível baixar o arquivo."));
+    });
+    prepararAcesso();
   </script>
 </body>
 </html>

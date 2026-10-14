@@ -1,5 +1,15 @@
 {
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "framework": null
+  "framework": null,
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://sagtrack-backend.onrender.com/api/:path*"
+    },
+    {
+      "source": "/arquivos/:path*",
+      "destination": "https://sagtrack-backend.onrender.com/arquivos/:path*"
+    }
+  ]
 }
