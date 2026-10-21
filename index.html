@@ -3716,23 +3716,33 @@
         ? det.executores
         : (rota && Array.isArray(rota.executores) ? rota.executores : []);
       const efetivos = executores.filter((item) => item && (item.papel === "principal" || item.papel === "apoio") && item.placa);
-      if (efetivos.length) {
-        return efetivos.map((item) => ({
-          placa: String(item.placa),
-          papel: item.papel,
-          cor: item.cor || "",
-          percentual: item.percentual,
-          contribuicao_exclusiva: item.contribuicao_exclusiva,
-        }));
-      }
       const saida = [];
-      const principal = rota ? String(rota.placa_principal || rota.placa || "").trim() : "";
-      if (principal && principal !== "—") saida.push({ placa: principal, papel: "principal", cor: "" });
-      const apoios = rota && Array.isArray(rota.placas_apoio) ? rota.placas_apoio : [];
-      apoios.forEach((placa) => {
+      if (efetivos.length) {
+        efetivos.forEach((item) => {
+          saida.push({
+            placa: String(item.placa),
+            papel: item.papel,
+            cor: item.cor || "",
+            percentual: item.percentual,
+            contribuicao_exclusiva: item.contribuicao_exclusiva,
+          });
+        });
+      } else {
+        const principal = rota ? String(rota.placa_principal || rota.placa || "").trim() : "";
+        if (principal && principal !== "—") saida.push({ placa: principal, papel: "principal", cor: "" });
+        const apoios = rota && Array.isArray(rota.placas_apoio) ? rota.placas_apoio : [];
+        apoios.forEach((placa) => {
+          const texto = String(placa || "").trim();
+          if (!texto || saida.some((item) => normPlaca(item.placa) === normPlaca(texto))) return;
+          saida.push({ placa: texto, papel: "apoio", cor: "" });
+        });
+      }
+      const leitura = det && det.comparacao_leitura;
+      const extras = leitura && Array.isArray(leitura.ausente_no_snapshot) ? leitura.ausente_no_snapshot : [];
+      extras.forEach((placa) => {
         const texto = String(placa || "").trim();
         if (!texto || saida.some((item) => normPlaca(item.placa) === normPlaca(texto))) return;
-        saida.push({ placa: texto, papel: "apoio", cor: "" });
+        saida.push({ placa: texto, papel: "apoio", cor: "", oficial: false });
       });
       return saida;
     }
@@ -3751,7 +3761,22 @@
         cor: item.cor || "",
         linhas: (item.linhas || []).filter((linha) => linha && linha.length >= 2),
         tracejado: false,
+        oficial: item.oficial !== false,
       }));
+    }
+
+    function apoiosLeitura(rota) {
+      const det = detalheCacheDaRota(rota);
+      const lista = det && det.comparacao_leitura && det.comparacao_leitura.ausente_no_snapshot;
+      if (!Array.isArray(lista)) return [];
+      return lista.map((placa) => String(placa || "").trim()).filter(Boolean);
+    }
+
+    function textoApoioCelula(rota) {
+      const oficial = textoApoio(rota);
+      const lidos = apoiosLeitura(rota);
+      if (!lidos.length) return oficial;
+      return oficial + " · leitura " + lidos.join(", ");
     }
 
     function pintarTabelaVivo() {
@@ -3768,7 +3793,7 @@
         const codigo = escaparVivo(r.codigo || "");
         const sel = r.codigo === vivoCodigo ? "sel" : "";
         const principal = placaDaRota(r);
-        const apoios = textoApoio(r);
+        const apoios = textoApoioCelula(r);
         return {
           tabela: `<tr data-codigo="${codigo}" class="${sel}">
           <td>${escaparVivo(r.codigo || "—")}</td>
@@ -3820,7 +3845,7 @@
       const pendentes = (det && det.nao_confirmados) || rota.nao_confirmados || [];
       const chip = (item) => {
         const papel = String(item.papel || "");
-        const nome = papel === "principal" ? "Principal" : "Apoio efetivo";
+        const nome = papel === "principal" ? "Principal" : (item.oficial === false ? "Apoio efetivo · leitura" : "Apoio efetivo");
         const cor = corPlaca(item.placa);
         const sel = normPlaca(vivoPlacaSelecionada) === normPlaca(item.placa) ? " sel" : "";
         const exclusivo = papel === "apoio" && item.contribuicao_exclusiva != null ? " · exclusivo " + Number(item.contribuicao_exclusiva).toFixed(0) + "%" : "";
@@ -3839,18 +3864,23 @@
       const blocoPendente = pendentes.length
         ? `<p class="vivo-secao">Não confirmado</p><p class="vivo-nota">${pendentes.map((placa) => escaparVivo(placa)).join(", ")} — não entra na cobertura.</p>`
         : "";
+      const leitura = det && det.comparacao_leitura;
+      const ausentes = leitura && Array.isArray(leitura.ausente_no_snapshot) ? leitura.ausente_no_snapshot.filter(Boolean) : [];
+      const blocoLeitura = ausentes.length
+        ? `<p class="vivo-secao">Leitura do GPS</p><p class="vivo-nota">${escaparVivo(leitura.aviso || "O snapshot encerrado não registra este apoio efetivo.")} Apoio efetivo na leitura: ${ausentes.map((placa) => escaparVivo(placa)).join(", ")}.${leitura.percentual_leitura == null ? "" : " União lida: " + textoPct(leitura.percentual_leitura) + ". O histórico permanece " + textoPct(rota.percentual) + "."}</p>`
+        : "";
       const linhas = [
         ["Situação", rota.status],
         ["Execução consolidada", textoPct(rota.percentual)],
         ["Principal", placaDaRota(rota)],
-        ["Apoios efetivos", textoApoio(rota)],
+        ["Apoios efetivos", textoApoioCelula(rota)],
         ["Início", rota.inicio || "—"],
         ["Último GPS", rota.ultimo_gps || "—"],
       ];
       box.innerHTML = `<span class="vivo-alca" aria-hidden="true"></span><div class="rota-movel-topo"><h2 id="vivo-sheet-titulo" style="margin:0;font-size:18px">Rota ${titulo}</h2><button type="button" class="sec vivo-fechar-ficha">Fechar</button></div>${nomeLongo}`
         + `<div class="vivo-ficha-acoes"><button type="button" class="vivo-ir-mapa" data-codigo="${codigo}">Ver no mapa</button><button type="button" class="vivo-so-rota" data-codigo="${codigo}">Ver detalhes da execução</button></div>`
         + linhas.map(([k, v]) => `<div><b>${k}</b> ${escaparVivo(v || "—")}</div>`).join("")
-        + blocoEfetivos + blocoSobre + blocoPassagem + blocoPendente;
+        + blocoEfetivos + blocoSobre + blocoPassagem + blocoPendente + blocoLeitura;
       box.setAttribute("role", "dialog");
       box.setAttribute("aria-modal", estreito ? "true" : "false");
       box.setAttribute("aria-labelledby", "vivo-sheet-titulo");
@@ -4495,7 +4525,7 @@
         (pacote.pontos || []).forEach((ponto) => {
           if (!ponto || ponto.deslocamento || ponto.lat == null || ponto.lon == null) return;
           const item = vivoLinhasPlaca.find((linha) => normPlaca(linha.placa) === normPlaca(ponto.placa) && !linha.geral);
-          if (item) item.linha.addLatLng([ponto.lat, ponto.lon]);
+          if (item) acrescentarPontoNaRota(item, ponto.lat, ponto.lon);
         });
       } else if (vivoFoco) {
         aplicarVisaoSelecionada(vivoFoco, vivoDetalheCache[data + "|" + turno + "|" + vivoFoco] || null);
@@ -4600,7 +4630,7 @@
       veiculos.forEach((veiculo) => {
         const cor = corPlaca(veiculo.placa);
         const peso = veiculo.papel === "principal" ? 5 : 4;
-        const nome = veiculo.papel === "principal" ? "Principal" : "Apoio efetivo";
+        const nome = veiculo.papel === "principal" ? "Principal" : (veiculo.oficial === false ? "Apoio efetivo · leitura" : "Apoio efetivo");
         veiculo.linhas.forEach((linha) => {
           const poly = L.polyline(linha, {
             color: cor,
@@ -4626,20 +4656,6 @@
       });
     }
 
-    function destacarTrechosGerais(efetivos) {
-      limparGpsAzul();
-      if (!vivoGrupoTrilha) return;
-      const placas = new Set(efetivos.map((item) => normPlaca(item.placa)));
-      vivoGrupoTrilha.eachLayer((linha) => {
-        if (!linha.setStyle || linha._vivoDestaque || linha._vivoTipo === "desloc") return;
-        if (!placas.has(normPlaca(linha._vivoPlaca))) return;
-        const peso = 5;
-        linha.setStyle({ color: corPlaca(linha._vivoPlaca), weight: peso, opacity: 0.95, dashArray: null });
-        toqueLinha(linha, true);
-        vivoLinhasPlaca.push({ placa: linha._vivoPlaca, linha, peso, geral: true });
-      });
-    }
-
     function aplicarVisaoSelecionada(codigo, det) {
       if (!codigo || !vivoGrupoTrilha) return;
       const chave = chaveDestaque(codigo, det);
@@ -4649,7 +4665,6 @@
         limparDetalheRota();
         const desenhaveis = veiculosParaDestaque(det && det.veiculos, "");
         if (desenhaveis.some((item) => item.linhas.length)) desenharDestaque(desenhaveis);
-        else destacarTrechosGerais(placasEfetivas(rotaVivo(codigo), det));
         if (det) {
           desenharTrechosOficiais(det.trechos_feitos, vivoGrupoFeitos, { color: "#1b8a5a", weight: 5, opacity: 0.9 });
           desenharTrechosOficiais(det.trechos_faltando, vivoGrupoFalta, { color: "#b34145", weight: 4, opacity: 0.85, dashArray: "2 6" });
@@ -4671,21 +4686,89 @@
       elevarMarcasDetalhe();
     }
 
+    function aneisDoSetor(codigo) {
+      const layer = vivoCamadas[codigo];
+      if (!layer || !layer.getLatLngs) return [];
+      const aneis = [];
+      const coletar = (no) => {
+        if (!no || !no.length) return;
+        if (typeof no[0].lat === "number") aneis.push(no);
+        else no.forEach(coletar);
+      };
+      coletar(layer.getLatLngs());
+      return aneis;
+    }
+
+    function pontoNoAnel(lat, lon, anel) {
+      let dentro = false;
+      for (let i = 0, j = anel.length - 1; i < anel.length; j = i++) {
+        const yi = anel[i].lat;
+        const xi = anel[i].lng;
+        const yj = anel[j].lat;
+        const xj = anel[j].lng;
+        const cruza = (yi > lat) !== (yj > lat) && lon < ((xj - xi) * (lat - yi)) / ((yj - yi) || 1e-12) + xi;
+        if (cruza) dentro = !dentro;
+      }
+      return dentro;
+    }
+
+    function pontoNoSetor(codigo, lat, lon) {
+      const aneis = aneisDoSetor(codigo);
+      if (!aneis.length) return false;
+      return aneis.some((anel) => pontoNoAnel(lat, lon, anel));
+    }
+
+    function acrescentarPontoNaRota(item, lat, lon) {
+      if (!pontoNoSetor(vivoFoco, lat, lon)) {
+        item.cortado = true;
+        return;
+      }
+      if (item.cortado) {
+        item.cortado = false;
+        item.semente = [lat, lon];
+        return;
+      }
+      if (item.semente) {
+        const poly = L.polyline([item.semente, [lat, lon]], {
+          color: item.linha.options.color,
+          weight: item.peso,
+          opacity: 0.95,
+          lineJoin: "round",
+          lineCap: "round",
+          smoothFactor: 0,
+        });
+        const dica = item.linha.getTooltip && item.linha.getTooltip();
+        if (dica) poly.bindTooltip(dica.getContent(), { sticky: true });
+        poly._vivoDestaque = true;
+        poly._vivoPlaca = item.placa;
+        poly.on("click", (ev) => {
+          if (ev.originalEvent) L.DomEvent.stopPropagation(ev);
+          vivoPlacaSelecionada = normPlaca(vivoPlacaSelecionada) === normPlaca(item.placa) ? "" : item.placa;
+          aplicarDestaquePlaca();
+          pintarDetalheVivo(rotaVivo(vivoCodigo || vivoFoco));
+          pintarPlacasMapa();
+        });
+        poly.addTo(vivoGrupoTrilha);
+        vivoGpsDetalhe.push(poly);
+        vivoLinhasPlaca.push({ placa: item.placa, linha: poly, peso: item.peso });
+        item.semente = null;
+        return;
+      }
+      item.linha.addLatLng([lat, lon]);
+    }
+
     function enquadrarDestaque(codigo) {
       if (!vivoMapa) return;
-      const ativos = vivoLinhasPlaca.filter((item) => !vivoPlacaSelecionada || normPlaca(item.placa) === normPlaca(vivoPlacaSelecionada));
+      const layer = vivoCamadas[codigo];
+      if (!layer || !layer.getBounds) return;
       let limites = null;
-      ativos.forEach((item) => {
-        if (!item.linha || !item.linha.getBounds) return;
-        let caixa = null;
-        try { caixa = item.linha.getBounds(); } catch (e) { caixa = null; }
-        if (!caixa || !caixa.isValid || !caixa.isValid()) return;
-        limites = limites ? limites.extend(caixa) : caixa;
-      });
-      if ((!limites || !limites.isValid()) && vivoCamadas[codigo] && vivoCamadas[codigo].getBounds) {
-        try { limites = vivoCamadas[codigo].getBounds(); } catch (e) { limites = null; }
-      }
-      if (limites && limites.isValid()) vivoMapa.fitBounds(limites.pad(0.2), { animate: false, maxZoom: 16 });
+      try { limites = layer.getBounds(); } catch (e) { limites = null; }
+      if (!limites || !limites.isValid()) return;
+      const estreito = window.matchMedia("(max-width: 900px)").matches;
+      vivoMapa.stop();
+      const altura = ($("vivo-folha") && $("vivo-folha").clientHeight) || 420;
+      const topo = estreito ? 24 : Math.min(150, Math.round(altura * 0.32));
+      vivoMapa.fitBounds(limites, { paddingTopLeft: [20, topo], paddingBottomRight: [20, 24], maxZoom: 16, animate: false });
     }
 
     async function selecionarRotaNoMapa(codigo, opcoes) {
@@ -4790,7 +4873,7 @@
       box.innerHTML = efetivos.map((item) => {
         const cor = corPlaca(item.placa);
         const sel = normPlaca(vivoPlacaSelecionada) === normPlaca(item.placa) ? " sel" : "";
-        const nome = item.papel === "principal" ? "Principal" : "Apoio";
+        const nome = item.papel === "principal" ? "Principal" : (item.oficial === false ? "Apoio · leitura" : "Apoio");
         return `<button type="button" class="vivo-placa${sel}" data-placa="${escaparVivo(item.placa)}" style="color:${cor}"><i style="background:${cor}"></i>${nome} ${escaparVivo(item.placa)}</button>`;
       }).join("");
     }

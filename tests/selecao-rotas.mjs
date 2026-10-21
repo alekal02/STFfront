@@ -77,6 +77,40 @@ assert.deepEqual(
   ["principal", "apoio", "apoio"],
 );
 
+const legado = {
+  codigo: "65DN",
+  percentual: 60.3,
+  placa: "SDE-5I26",
+  placa_principal: "SDE-5I26",
+  placas_apoio: [],
+};
+const detLegado = {
+  percentual: 60.3,
+  executores: [],
+  passagens: ["PAS9Z99"],
+  comparacao_leitura: {
+    oficial: false,
+    percentual_leitura: 90.1,
+    ausente_no_snapshot: ["RBM-2G21"],
+    placas_apoio: ["RBM-2G21"],
+    passagens: ["PAS9Z99"],
+  },
+  veiculos: [
+    { placa: "SDE-5I26", papel: "principal", oficial: true, linhas: [[[1, 1], [2, 2]]] },
+    { placa: "RBM-2G21", papel: "apoio", oficial: false, linhas: [[[3, 3], [4, 4]]] },
+    { placa: "SDN-8F66", papel: "sobreposta", oficial: false, linhas: [[[5, 5], [6, 6]]] },
+  ],
+};
+const efetivosLegado = api.placasEfetivas(legado, detLegado);
+assert.deepEqual(efetivosLegado.map((item) => item.placa), ["SDE-5I26", "RBM-2G21"]);
+assert.equal(efetivosLegado.some((item) => item.placa === "PAS9Z99" || item.placa === "SDN-8F66"), false);
+assert.equal(efetivosLegado.find((item) => item.placa === "RBM-2G21").oficial, false);
+const desenhoLegado = api.veiculosParaDestaque(detLegado.veiculos, "");
+assert.deepEqual(desenhoLegado.map((item) => item.placa), ["SDE-5I26", "RBM-2G21"]);
+assert.equal(desenhoLegado.find((item) => item.placa === "RBM-2G21").oficial, false);
+assert.equal(legado.percentual, 60.3);
+assert.equal(detLegado.percentual, 60.3);
+
 assert.equal(api.chaveDestaque("65DN", detA), api.chaveDestaque("65DN", detA));
 assert.notEqual(api.chaveDestaque("65DN", detA), api.chaveDestaque("66DN", detB));
 assert.notEqual(api.chaveDestaque("65DN", null), api.chaveDestaque("65DN", detA));
@@ -97,7 +131,7 @@ assert.doesNotMatch(html, /vivoGrupoFeitos\.addTo/);
 assert.doesNotMatch(html, /vivoGrupoFalta\.addTo/);
 assert.doesNotMatch(html, /dashArray: papel === "sobreposta"/);
 
-const destaque = html.slice(html.indexOf("function desenharDestaque"), html.indexOf("function destacarTrechosGerais"));
+const destaque = html.slice(html.indexOf("function desenharDestaque"), html.indexOf("function aplicarVisaoSelecionada"));
 assert.match(destaque, /corPlaca\(veiculo\.placa\)/);
 assert.doesNotMatch(destaque, /dashArray/);
 
@@ -114,5 +148,15 @@ assert.match(mostrar, /vivoFoco = ""/);
 assert.match(mostrar, /vivoCodigo = ""/);
 assert.match(mostrar, /vivoPlacaSelecionada = ""/);
 assert.match(mostrar, /pintarTabelaVivo\(\)/);
+assert.doesNotMatch(mostrar, /fetch\(/);
+
+const enquadrar = html.slice(html.indexOf("function enquadrarDestaque"), html.indexOf("async function selecionarRotaNoMapa"));
+assert.match(enquadrar, /vivoCamadas\[codigo\]/);
+assert.match(enquadrar, /layer\.getBounds/);
+assert.doesNotMatch(enquadrar, /vivoLinhasPlaca/);
+assert.doesNotMatch(enquadrar, /linha\.getBounds/);
+const visao = html.slice(html.indexOf("function aplicarVisaoSelecionada"), html.indexOf("function aneisDoSetor"));
+assert.doesNotMatch(visao, /destacarTrechosGerais/);
+assert.match(html, /function pontoNoSetor/);
 
 console.log("selecao-rotas ok");
