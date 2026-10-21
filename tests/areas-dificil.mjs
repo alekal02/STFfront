@@ -69,8 +69,17 @@ const api = new Function(
 }, globalThis);
 
 const anel = [[-16.8, -49.3], [-16.8, -49.2], [-16.9, -49.2], [-16.9, -49.3], [-16.8, -49.3]];
-function area(id, nome, programada) {
-  return { id, nome, frequencia: "QUI", programada, poligonos: [anel], percentual: programada ? 12.5 : null };
+function area(id, nome, programada, atividade) {
+  return {
+    id,
+    nome,
+    frequencia: "QUI",
+    programada,
+    atividade: !!atividade,
+    fora_programacao: !!atividade && !programada,
+    poligonos: [anel],
+    percentual: programada ? 12.5 : null,
+  };
 }
 const sex = [
   area("CHACARA SAO PEDRO|-16.81000|-49.25000", "CHACARA SAO PEDRO", true),
@@ -116,50 +125,58 @@ function idsVisiveis() {
   return vivoGrupoAreas.layers.map((layer) => layer._areaId);
 }
 
-api.desenharDificil(pacote("2026-10-21", "diurno", sex.map((item) => ({ ...item, programada: false })), {
-  area_id: "TERRA DO SOL|-16.86000|-49.30000",
-  linhas: { "TERRA DO SOL|-16.86000|-49.30000": [[[-16.85, -49.25], [-16.851, -49.251]]] },
-  eventos: [{ tipo: "entrada", area_id: "TERRA DO SOL|-16.86000|-49.30000", lat: -16.85, lon: -49.25 }],
+const linha = [[[-16.85, -49.25], [-16.851, -49.251]]];
+const programadaSemAtividade = sex.map((item) => ({ ...item, atividade: false, fora_programacao: false }));
+api.desenharDificil(pacote("2026-10-23", "diurno", programadaSemAtividade, {
+  linhas: { [sex[0].id]: linha },
+  eventos: [{ tipo: "entrada", area_id: sex[0].id, lat: -16.85, lon: -49.25 }],
 }));
 assert.deepEqual(idsVisiveis(), []);
 assert.equal(vivoGrupoDificil.layers.some((layer) => layer.tipo === "linha"), false);
-assert.equal(folha.dataset.areasFiltro, "programadas");
+assert.equal(folha.dataset.areasFiltro, "atividade");
 assert.equal(folha.dataset.areasPoligonos, "0");
 
-api.desenharDificil(pacote("2026-10-22", "diurno", [terra, ...sex.filter((item) => item.nome !== "TERRA DO SOL").map((item) => ({ ...item, programada: false }))], {
-  linhas: { [terra.id]: [[[-16.85, -49.25], [-16.851, -49.251]]] },
+const terraFora = { ...terra, programada: false, atividade: true, fora_programacao: true, percentual: null };
+api.desenharDificil(pacote("2026-10-21", "diurno", [terraFora, ...sex.filter((item) => item.nome !== "TERRA DO SOL").map((item) => ({ ...item, programada: false, atividade: false }))], {
+  linhas: { [terraFora.id]: linha },
 }));
-assert.deepEqual(idsVisiveis(), [terra.id]);
-assert.equal(vivoGrupoDificil.layers.some((layer) => layer.tipo === "linha"), false);
+assert.deepEqual(idsVisiveis(), [terraFora.id]);
+assert.equal(vivoGrupoDificil.layers.filter((layer) => layer.tipo === "linha").length, 1);
 
-const sexta = pacote("2026-10-23", "diurno", sex, {
-  linhas: { [sex[0].id]: [[[-16.81, -49.25], [-16.811, -49.251]]] },
+const chacaraA = { ...sex[0], atividade: true, fora_programacao: false };
+const chacaraB = { ...sex[1], atividade: true, fora_programacao: false };
+const sexta = pacote("2026-10-23", "diurno", [chacaraA, chacaraB, ...sex.slice(2).map((item) => ({ ...item, atividade: false }))], {
+  linhas: {
+    [chacaraA.id]: linha,
+    [chacaraB.id]: [[[-16.82, -49.26], [-16.821, -49.261]]],
+  },
 });
 api.desenharDificil(sexta);
-assert.deepEqual(idsVisiveis().slice().sort(), sex.filter((item) => item.programada).map((item) => item.id).sort());
-assert.equal(idsVisiveis().filter((id) => id.startsWith("CHACARA SAO PEDRO|")).length, 2);
-assert.equal(idsVisiveis().includes(terra.id), false);
-
-const escolhida = vivoGrupoAreas.layers.find((layer) => layer._areaId === sex[0].id);
-escolhida.fire("click");
-await new Promise((resolver) => setTimeout(resolver, 0));
-assert.equal(api.foco(), sex[0].id);
-assert.equal(vivoGrupoDificil.layers.filter((layer) => layer.tipo === "linha").length, 1);
+assert.deepEqual(idsVisiveis().slice().sort(), [chacaraA.id, chacaraB.id].sort());
+assert.equal(vivoGrupoDificil.layers.filter((layer) => layer.tipo === "linha").length, 2);
 assert.equal(idsVisiveis().includes("ALTO|-16.87000|-49.31000"), false);
 
+const escolhida = vivoGrupoAreas.layers.find((layer) => layer._areaId === chacaraA.id);
+escolhida.fire("click");
+await new Promise((resolver) => setTimeout(resolver, 0));
+assert.equal(api.foco(), chacaraA.id);
+assert.equal(vivoGrupoDificil.layers.filter((layer) => layer.tipo === "linha").length, 1);
+assert.deepEqual(idsVisiveis().slice().sort(), [chacaraA.id, chacaraB.id].sort());
+
 api.setFoco(terra.id);
-api.desenharDificil(pacote("2026-10-24", "diurno", sab));
+api.desenharDificil(pacote("2026-10-24", "diurno", sab.map((item) => ({ ...item, atividade: !!item.programada, fora_programacao: false }))));
 assert.equal(api.foco(), "");
 assert.deepEqual(idsVisiveis().slice().sort(), sab.filter((item) => item.programada).map((item) => item.id).sort());
 assert.equal(idsVisiveis().includes(terra.id), false);
-assert.equal(vivoGrupoDificil.layers.some((layer) => layer.tipo === "linha"), false);
 
-api.desenharDificil(pacote("2026-10-22", "noturno", [terra, ...sex].map((item) => ({ ...item, programada: false }))));
+api.desenharDificil(pacote("2026-10-22", "noturno", [terra, ...sex].map((item) => ({ ...item, programada: false, atividade: false }))));
 assert.deepEqual(idsVisiveis(), []);
 assert.equal(vivoGrupoAreas.layers.length, 0);
 
-api.desenharDificil(pacote("2026-10-22", "diurno", [terra]));
-assert.deepEqual(idsVisiveis(), [terra.id]);
+const ativa = { ...terra, atividade: true, fora_programacao: false };
+api.desenharDificil(pacote("2026-10-22", "diurno", [ativa], { linhas: { [ativa.id]: linha } }));
+assert.deepEqual(idsVisiveis(), [ativa.id]);
+assert.equal(vivoGrupoDificil.layers.filter((layer) => layer.tipo === "linha").length, 1);
 api.limparCamadaDificil();
 assert.deepEqual(idsVisiveis(), []);
 assert.equal(vivoGrupoDificil.layers.length, 0);
@@ -170,26 +187,72 @@ assert.equal(api.areaEstaProgramada({ frequencia: "QUI" }, { data: "2026-10-21",
 assert.equal(api.areaEstaProgramada({ frequencia: "QUI" }, { data: "2026-10-22", turno: "diurno" }), true);
 assert.equal(api.areaEstaProgramada({ frequencia: "SEG/SEX - DIURNO" }, { data: "2026-10-23", turno: "noturno" }), false);
 
-const pedidos = [];
-globalThis.fetch = async (url) => {
-  pedidos.push(url);
+let atrasada;
+let chamadas = 0;
+globalThis.fetch = (url) => {
+  chamadas += 1;
   const consulta = new URL(url, "http://local").searchParams;
   const data = consulta.get("data");
   const turno = consulta.get("turno");
-  const areas = data === "2026-10-22"
-    ? [{ ...terra, programada: true }]
-    : sex.map((item) => ({ ...item, programada: false }));
-  return { ok: true, json: async () => ({ data, turno, areas, veiculos: [], resumo: {} }) };
+  if (chamadas === 1) {
+    return new Promise((resolver) => {
+      atrasada = () => resolver({
+        ok: true,
+        json: async () => ({
+          data,
+          turno,
+          areas: [{ ...ativa, programada: true }],
+          veiculos: [{ codigo: "CBT018", placa: "SCN-4B49", trechos_por_area: { [ativa.id]: linha }, isolados: [], poligonos: [], eventos: [] }],
+          resumo: {},
+        }),
+      });
+    });
+  }
+  return Promise.resolve({
+    ok: true,
+    json: async () => ({ data, turno, areas: programadaSemAtividade, veiculos: [], resumo: {} }),
+  });
 };
-const primeiro = api.carregarDificil("2026-10-22", "diurno");
-const segundo = api.carregarDificil("2026-10-21", "diurno");
-await primeiro;
-await segundo;
-assert.equal(idsVisiveis().includes(terra.id), false);
+const pedidoAntigo = api.carregarDificil("2026-10-22", "diurno");
+const pedidoNovo = api.carregarDificil("2026-10-21", "diurno");
+await pedidoNovo;
+atrasada();
+await pedidoAntigo;
+assert.equal(idsVisiveis().includes(ativa.id), false);
 assert.equal(folha.dataset.areasPoligonos, "0");
-assert.equal(pedidos.length, 2);
+
+globalThis.fetch = async () => ({
+  ok: true,
+  json: async () => ({
+    data: "2026-10-22",
+    turno: "diurno",
+    areas: [ativa],
+    veiculos: [{ codigo: "CBT018", placa: "SCN-4B49", trechos_por_area: { [ativa.id]: linha }, isolados: [], poligonos: [], eventos: [] }],
+    resumo: {},
+  }),
+});
+await api.carregarDificil("2026-10-22", "diurno");
+assert.deepEqual(idsVisiveis(), [ativa.id]);
+globalThis.fetch = async () => { throw new Error("Fulltrack temporariamente indisponivel"); };
+await api.carregarDificil("2026-10-22", "diurno");
+assert.deepEqual(idsVisiveis(), [ativa.id]);
+globalThis.fetch = async () => ({ ok: false, json: async () => ({}) });
+await api.carregarDificil("2026-10-22", "diurno");
+assert.deepEqual(idsVisiveis(), [ativa.id]);
+globalThis.fetch = async () => ({
+  ok: true,
+  json: async () => ({ data: "2026-10-22", turno: "diurno", gps_indisponivel: true, falha: true, areas: [], veiculos: [], resumo: {} }),
+});
+await api.carregarDificil("2026-10-22", "diurno");
+assert.deepEqual(idsVisiveis(), [ativa.id]);
+
+api.limparCamadaDificil();
+await api.carregarDificil("2026-10-21", "diurno");
+assert.deepEqual(idsVisiveis(), []);
+
+assert.match(html, /Fora da programação/);
+assert.match(html, /if \(!area\.atividade\) return/);
+assert.match(html, /gps_indisponivel/);
+assert.match(html, /vivoDificilSeq \+= 1;\s*limparCamadaDificil\(\)/);
+assert.match(html, /function estiloRota\(codigo\)/);
 assert.equal(trecho.includes("vivoMostrarTodasAreas"), false);
-assert.equal(trecho.includes("fora_programacao"), false);
-assert.match(html, /if \(!programada\) return/);
-assert.match(html, /vivoDificilSeq \+= 1/);
-assert.match(html, /limparCamadaDificil\(\)/);

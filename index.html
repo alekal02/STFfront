@@ -3960,12 +3960,13 @@
       const nome = (area && (area.nome || area.completo)) || "Difícil acesso";
       const dia = (area && area.frequencia) || "Não cadastrado";
       const estado = programada ? "Execução prevista nesta data" : "Sem execução prevista nesta data";
+      const fora = area && area.fora_programacao ? "<div>Fora da programação</div>" : "";
       const info = (area && (area.completo || area.codigo)) || "";
       let execucao = "";
       if (programada && area && area.percentual != null && area.percentual !== "") {
         execucao = `<div>Execução deste setor: ${escaparVivo(textoPct(area.percentual))}</div>`;
       }
-      return `<div class="vivo-popup"><strong>${escaparVivo(nome)}</strong><div>Dia programado: ${escaparVivo(dia)}</div><div>${escaparVivo(estado)}</div>${execucao}${info ? `<div>${escaparVivo(info)}</div>` : ""}</div>`;
+      return `<div class="vivo-popup"><strong>${escaparVivo(nome)}</strong><div>Dia programado: ${escaparVivo(dia)}</div><div>${escaparVivo(estado)}</div>${fora}${execucao}${info ? `<div>${escaparVivo(info)}</div>` : ""}</div>`;
     }
 
     function liberarToqueArea(poly) {
@@ -4376,19 +4377,27 @@
     }
 
     function linhasInternasDaArea(veiculo, pacote) {
-      if (!vivoAreaFoco) return [];
-      const area = ((pacote && pacote.areas) || []).find((item) => item && item.id === vivoAreaFoco);
-      if (!area || !areaEstaProgramada(area, pacote)) return [];
-      return ((veiculo && veiculo.trechos_por_area) || {})[vivoAreaFoco] || [];
+      const mapa = (veiculo && veiculo.trechos_por_area) || {};
+      const ativas = [];
+      ((pacote && pacote.areas) || []).forEach((area) => {
+        if (area && area.id && area.atividade) ativas.push(area.id);
+      });
+      const ids = vivoAreaFoco ? [vivoAreaFoco] : ativas;
+      const linhas = [];
+      ids.forEach((id) => {
+        if (ativas.indexOf(id) < 0) return;
+        (mapa[id] || []).forEach((linha) => linhas.push(linha));
+      });
+      return linhas;
     }
 
     function desenharDificil(pacote) {
       if (!vivoGrupoDificil) return;
-      const idsProgramados = new Set();
+      const idsAtivos = new Set();
       ((pacote && pacote.areas) || []).forEach((area) => {
-        if (area && area.id && areaEstaProgramada(area, pacote)) idsProgramados.add(area.id);
+        if (area && area.id && area.atividade) idsAtivos.add(area.id);
       });
-      if (vivoAreaFoco && !idsProgramados.has(vivoAreaFoco)) {
+      if (vivoAreaFoco && !idsAtivos.has(vivoAreaFoco)) {
         vivoAreaFoco = "";
         vivoAreaEnquadrar = false;
       }
@@ -4447,7 +4456,7 @@
         else if (veiculo.area_id) cor = "#1d4ed8";
         (veiculo.eventos || []).forEach((ev) => {
           if (!ev || ev.lat == null || ev.lon == null) return;
-          if (!ev.area_id || !idsProgramados.has(ev.area_id)) return;
+          if (!ev.area_id || !idsAtivos.has(ev.area_id)) return;
           if (vivoAreaFoco && ev.area_id !== vivoAreaFoco) return;
           const latEv = Number(ev.lat);
           const lonEv = Number(ev.lon);
@@ -4464,7 +4473,7 @@
           nIsolados += 1;
           L.circleMarker(pontos[0], { radius: 6, color: "#102028", weight: 2, fillColor: cor, fillOpacity: 1, pane: "dificil" }).bindTooltip(nome + " · " + (veiculo.rotulo || veiculo.situacao || "GPS"), { sticky: true }).addTo(vivoGrupoDificil);
         });
-        if (veiculo.area_id && !idsProgramados.has(veiculo.area_id)) return;
+        if (veiculo.area_id && !idsAtivos.has(veiculo.area_id)) return;
         if (vivoAreaFoco && veiculo.area_id !== vivoAreaFoco) return;
         if (veiculo.lat == null || veiculo.lon == null || (veiculo.situacao || "") === "Sem rastreamento") return;
         const lat = Number(veiculo.lat);
@@ -4479,7 +4488,7 @@
       if (vivoGrupoAreas) {
         (pacote.areas || []).forEach((area) => {
           const programada = areaEstaProgramada(area, pacote);
-          if (!programada) return;
+          if (!area.atividade) return;
           const aneis = (area.poligonos || []).map(pontosDaLinha).filter(anelValido);
           if (!aneis.length) return;
           nProgramadas += 1;
@@ -4501,6 +4510,7 @@
             }).addTo(vivoGrupoAreas);
             poly._areaId = area.id;
             poly.bindPopup(htmlPopupArea(area, programada), { autoPan: true, closeButton: true, autoClose: true, closeOnClick: true, maxWidth: 280 });
+            if (area.fora_programacao) poly.bindTooltip("Fora da programação", { sticky: true });
             poly.on("click", (ev) => {
               if (ev.originalEvent) L.DomEvent.stopPropagation(ev);
               const mesmo = vivoAreaFoco === area.id;
@@ -4525,7 +4535,7 @@
         folha.dataset.dificilPoligonos = String(nPoligonos);
         folha.dataset.areasPoligonos = String(nAreas);
         folha.dataset.areasProgramadas = String(nProgramadas);
-        folha.dataset.areasFiltro = "programadas";
+        folha.dataset.areasFiltro = "atividade";
         folha.dataset.rotulosFixos = "0";
         folha.dataset.areasCamada = (pacote && pacote.camada) || "";
         folha.dataset.eventos = String(nEventos);
@@ -4569,6 +4579,12 @@
         const pacote = await resp.json();
         if (seq !== vivoDificilSeq) return;
         if ((String(pacote.data || "") + "|" + String(pacote.turno || "")) !== pedido) return;
+        if (pacote.gps_indisponivel) {
+          const anterior = window.vivoDificil;
+          const mesma = !!(anterior && (String(anterior.data || "") + "|" + String(anterior.turno || "")) === pedido && !anterior.gps_indisponivel);
+          const temAtividade = ((pacote.areas) || []).some((area) => area && area.atividade);
+          if (mesma || !temAtividade) return;
+        }
         desenharDificil(pacote);
       } catch (e) {
         return;
