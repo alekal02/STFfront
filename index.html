@@ -3919,6 +3919,8 @@
     let vivoFoco = "";
     let vivoDesenhoMs = 0;
     let vivoMostrarTodasAreas = false;
+    let vivoAreaFoco = "";
+    let vivoAreaEnquadrar = false;
 
     function semAcentoVivo(texto) {
       return String(texto || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
@@ -3959,7 +3961,11 @@
       const dia = (area && area.frequencia) || "Não cadastrado";
       const estado = programada ? "Execução prevista nesta data" : "Sem execução prevista nesta data";
       const info = (area && (area.completo || area.codigo)) || "";
-      return `<div class="vivo-popup"><strong>${escaparVivo(nome)}</strong><div>Dia programado: ${escaparVivo(dia)}</div><div>${escaparVivo(estado)}</div>${info ? `<div>${escaparVivo(info)}</div>` : ""}</div>`;
+      let execucao = "";
+      if (programada && area && area.percentual != null && area.percentual !== "") {
+        execucao = `<div>Execução deste setor: ${escaparVivo(textoPct(area.percentual))}</div>`;
+      }
+      return `<div class="vivo-popup"><strong>${escaparVivo(nome)}</strong><div>Dia programado: ${escaparVivo(dia)}</div><div>${escaparVivo(estado)}</div>${execucao}${info ? `<div>${escaparVivo(info)}</div>` : ""}</div>`;
     }
 
     function liberarToqueArea(poly) {
@@ -4408,7 +4414,8 @@
         const nome = (veiculo.codigo || "") + " · " + (veiculo.placa || "");
         if (veiculo.area_id) areasAtuais.add(veiculo.area_id);
         (veiculo.eventos || []).forEach((ev) => { if (ev && ev.area_id) areasVisitadas.add(ev.area_id); });
-        (veiculo.trechos_internos || []).forEach((linha) => {
+        const linhasDaArea = vivoAreaFoco ? (((veiculo.trechos_por_area || {})[vivoAreaFoco]) || []) : [];
+        linhasDaArea.forEach((linha) => {
           const pontos = pontosDaLinha(linha);
           if (pontos.length < 2) return;
           nTrajeto += 1;
@@ -4425,6 +4432,7 @@
         else if (veiculo.area_id) cor = "#1d4ed8";
         (veiculo.eventos || []).forEach((ev) => {
           if (!ev || ev.lat == null || ev.lon == null) return;
+          if (vivoAreaFoco && ev.area_id !== vivoAreaFoco) return;
           const latEv = Number(ev.lat);
           const lonEv = Number(ev.lon);
           if (!Number.isFinite(latEv) || !Number.isFinite(lonEv)) return;
@@ -4434,12 +4442,13 @@
           const verbo = entrada ? "Entrada" : "Saída";
           L.circleMarker([latEv, lonEv], { radius: 5, color: corEv, weight: 2, fillColor: corEv, fillOpacity: 1, pane: "dificil" }).bindTooltip(nome + " · " + verbo + " · " + (ev.area || "") + (ev.ts ? " · " + horaCurta(ev.ts) : ""), { sticky: true }).addTo(vivoGrupoDificil);
         });
-        (veiculo.isolados || []).forEach((par) => {
+        if (!vivoAreaFoco) (veiculo.isolados || []).forEach((par) => {
           const pontos = pontosDaLinha([par]);
           if (!pontos.length) return;
           nIsolados += 1;
           L.circleMarker(pontos[0], { radius: 6, color: "#102028", weight: 2, fillColor: cor, fillOpacity: 1, pane: "dificil" }).bindTooltip(nome + " · " + (veiculo.rotulo || veiculo.situacao || "GPS"), { sticky: true }).addTo(vivoGrupoDificil);
         });
+        if (vivoAreaFoco && veiculo.area_id !== vivoAreaFoco) return;
         if (veiculo.lat == null || veiculo.lon == null || (veiculo.situacao || "") === "Sem rastreamento") return;
         const lat = Number(veiculo.lat);
         const lon = Number(veiculo.lon);
@@ -4459,12 +4468,13 @@
           if (!vivoMostrarTodasAreas && !programada) return;
           const atual = !!(area.id && areasAtuais.has(area.id));
           const visitada = !!(area.id && areasVisitadas.has(area.id));
+          const escolhida = !!(vivoAreaFoco && area.id === vivoAreaFoco);
           const extra = !programada;
           nAreas += 1;
           aneis.forEach((anel) => {
             const poly = L.polygon(anel, {
-              color: "#7c2d12",
-              weight: extra ? 2 : (atual ? 6 : 4),
+              color: escolhida ? "#17324d" : "#7c2d12",
+              weight: escolhida ? 6 : (extra ? 2 : (atual ? 6 : 4)),
               opacity: extra ? 0.8 : 1,
               dashArray: extra ? "5 4" : null,
               fillColor: atual ? "#1d4ed8" : "#e07a00",
@@ -4473,7 +4483,16 @@
               className: extra ? "area-dificil area-dificil-extra" : "area-dificil",
               interactive: true,
             }).addTo(vivoGrupoAreas);
+            poly._areaId = area.id;
             poly.bindPopup(htmlPopupArea(area, programada), { autoPan: true, closeButton: true, autoClose: true, closeOnClick: true, maxWidth: 280 });
+            poly.on("click", (ev) => {
+              if (ev.originalEvent) L.DomEvent.stopPropagation(ev);
+              const mesmo = vivoAreaFoco === area.id;
+              vivoAreaFoco = mesmo ? "" : area.id;
+              vivoAreaEnquadrar = Boolean(vivoAreaFoco);
+              const pacoteAtual = pacote;
+              setTimeout(() => desenharDificil(pacoteAtual), 0);
+            });
             liberarToqueArea(poly);
           });
         });
@@ -4496,6 +4515,21 @@
         folha.dataset.eventos = String(nEventos);
       }
       enquadrarAreas();
+      if (vivoAreaEnquadrar && vivoAreaFoco && vivoMapa && vivoGrupoAreas) {
+        let alvo = null;
+        vivoGrupoAreas.eachLayer((layer) => {
+          if (!alvo && layer._areaId === vivoAreaFoco) alvo = layer;
+        });
+        if (alvo && alvo.getBounds) {
+          const caixa = alvo.getBounds();
+          if (caixa && caixa.isValid()) {
+            vivoMapa.stop();
+            vivoMapa.fitBounds(caixa, { padding: [24, 24], maxZoom: 16, animate: false });
+          }
+          if (alvo.openPopup) alvo.openPopup();
+        }
+        vivoAreaEnquadrar = false;
+      }
       window.vivoDificil = pacote;
     }
 
@@ -4928,6 +4962,8 @@
         vivoChaveMapa = chave;
         vivoCursor = "";
         vivoFoco = "";
+        vivoAreaFoco = "";
+        vivoAreaEnquadrar = false;
         vivoPlacaSelecionada = "";
         vivoDestaqueChave = "";
         vivoSelecaoSeq += 1;
