@@ -652,6 +652,13 @@
     .vivo-tabela th { cursor: pointer; color: var(--muted); font-size: 11px; letter-spacing: .3px; text-transform: uppercase; }
     .vivo-tabela tr.sel { background: #e8f5f5; }
     .vivo-tabela tr { cursor: pointer; }
+    .vivo-apoios { display: block; max-width: 240px; white-space: normal; color: #3d4a50; font-size: 12px; line-height: 1.35; }
+    .vivo-placas { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 8px; }
+    .vivo-placas button { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: #fff; border-radius: 999px; padding: 4px 8px; font-size: 12px; font-weight: 700; cursor: pointer; }
+    .vivo-placas button.sel { box-shadow: inset 0 0 0 2px currentColor; }
+    .vivo-placas button i { width: 8px; height: 8px; border-radius: 50%; }
+    .vivo-secao { margin: 8px 0 2px; font-size: 12px; font-weight: 800; letter-spacing: .2px; text-transform: uppercase; color: var(--muted); }
+    .vivo-nota { margin: 0; color: var(--muted); font-size: 12px; }
     .st-concluida { color: #1b8a5a; font-weight: 800; }
     .st-parcial { color: #c56a1a; font-weight: 800; }
     .st-inicio { color: #1d6a8a; font-weight: 800; }
@@ -1405,7 +1412,9 @@
               <span><i style="background:#e07a00"></i>Difícil acesso</span>
               <span><i style="background:#f6c08a;box-shadow:inset 0 0 0 2px #7c2d12"></i>Áreas de difícil acesso</span>
               <span><i style="background:#f2c14e;border-radius:50%"></i>Pino = posição atual</span>
-              <span id="legenda-trilha"><i style="background:#17324d"></i>Trilha = GPS persistido</span>
+              <span id="legenda-trilha"><i style="background:#17324d"></i>Cada cor = um caminhão</span>
+              <span><i style="background:#1b8a5a"></i>Trecho oficial executado</span>
+              <span><i style="background:#b34145"></i>Trecho oficial pendente</span>
               <span><i style="background:#8aa0ab;border-radius:50%"></i>GPS desatualizado</span>
               <span><i style="background:#6d7c86"></i>Deslocamento</span>
             </p>
@@ -1435,12 +1444,11 @@
               <thead>
                 <tr>
                   <th data-ord="codigo">Rota</th>
-                  <th data-ord="veiculo">Veículo</th>
-                  <th data-ord="placa">Placa</th>
-                  <th data-ord="inicio">Início</th>
+                  <th data-ord="rota">Setor</th>
                   <th data-ord="percentual">Execução</th>
-                  <th data-ord="status">Status</th>
-                  <th data-ord="ultimo_gps">Último GPS</th>
+                  <th data-ord="placa_principal">Principal</th>
+                  <th data-ord="apoio">Apoios efetivos</th>
+                  <th data-ord="status">Situação</th>
                 </tr>
               </thead>
               <tbody id="vivo-linhas"></tbody>
@@ -3455,6 +3463,11 @@
       const el = $("vivo-aviso");
       if (!el) return;
       el.className = "vivo-aviso";
+      if (falhaRede && !(vivoEstado && vivoEstado.atualizado_hora)) {
+        el.classList.add("err");
+        el.textContent = "Servidor indisponível. O percentual exibido vem da API e não é recalculado nesta tela.";
+        return;
+      }
       if (falhaRede && vivoEstado && vivoEstado.atualizado_hora) {
         el.classList.add("err");
         el.textContent = "⚠ Falha na atualização · dados de " + vivoEstado.atualizado_hora;
@@ -3609,8 +3622,8 @@
       const campo = vivoOrdem.campo;
       const dir = vivoOrdem.dir;
       return filtradas.slice().sort((a, b) => {
-        const va = a[campo];
-        const vb = b[campo];
+        const va = valorOrdemVivo(a, campo);
+        const vb = valorOrdemVivo(b, campo);
         if (typeof va === "number" && typeof vb === "number") return (va - vb) * dir;
         return String(va || "").localeCompare(String(vb || ""), "pt") * dir;
       });
@@ -3627,6 +3640,59 @@
       return texto.replace(".", ",") + "%";
     }
 
+    function placaDaRota(rota) {
+      if (!rota) return "—";
+      return String(rota.placa_principal || rota.placa || "—");
+    }
+
+    function textoApoio(rota) {
+      if (!rota) return "—";
+      const lista = Array.isArray(rota.placas_apoio) ? rota.placas_apoio.map((placa) => String(placa || "").trim()).filter(Boolean) : [];
+      if (lista.length) return lista.join(", ");
+      const apoio = String(rota.apoio || "").trim();
+      if (/^sem apoio identificado$/i.test(apoio)) return "Sem apoio identificado";
+      if (apoio) return apoio;
+      return "—";
+    }
+
+    function setorDaRota(rota) {
+      if (!rota) return "—";
+      const setor = String(rota.rota || "").trim();
+      const codigo = String(rota.codigo || "").trim();
+      if (setor && setor.toUpperCase() !== codigo.toUpperCase()) return setor;
+      return codigo || "—";
+    }
+
+    function valorOrdemVivo(rota, campo) {
+      if (!rota) return "";
+      if (campo === "placa_principal") return placaDaRota(rota);
+      if (campo === "apoio") return textoApoio(rota);
+      if (campo === "rota") return setorDaRota(rota);
+      return rota[campo];
+    }
+
+    function corPlaca(placa, preferida) {
+      if (preferida) return preferida;
+      const cores = ["#1d4ed8", "#0f766e", "#b45309", "#7c3aed", "#be123c", "#0369a1", "#4d7c0f", "#9f1239", "#4338ca", "#0e7490"];
+      const texto = String(placa || "");
+      let n = 0;
+      for (let i = 0; i < texto.length; i++) n = (n * 33 + texto.charCodeAt(i)) >>> 0;
+      return cores[n % cores.length];
+    }
+
+    function detalheCacheDaRota(rota) {
+      if (!rota) return null;
+      const data = ($("data-vivo") && $("data-vivo").value) || (vivoEstado && vivoEstado.data) || "";
+      const turno = (vivoEstado && vivoEstado.turno) || turnoVivo();
+      return vivoDetalheCache[data + "|" + turno + "|" + (rota.codigo || "")] || null;
+    }
+
+    function executoresDaRota(rota, det) {
+      if (det && Array.isArray(det.executores) && det.executores.length) return det.executores;
+      if (rota && Array.isArray(rota.executores)) return rota.executores;
+      return [];
+    }
+
     function pintarTabelaVivo() {
       const corpo = $("vivo-linhas");
       const lista = $("vivo-lista");
@@ -3640,24 +3706,25 @@
         const cls = classeStatus(r.grupo);
         const codigo = escaparVivo(r.codigo || "");
         const sel = r.codigo === vivoCodigo ? "sel" : "";
+        const principal = placaDaRota(r);
+        const apoios = textoApoio(r);
         return {
           tabela: `<tr data-codigo="${codigo}" class="${sel}">
-          <td>${escaparVivo(r.codigo || r.rota || "—")}</td>
-          <td>${escaparVivo(r.veiculo || "—")}<div class="rota-linha">${lugarVeiculo(r.placa)}</div></td>
-          <td>${escaparVivo(r.placa || "—")}</td>
-          <td>${escaparVivo(r.inicio || "—")}</td>
+          <td>${escaparVivo(r.codigo || "—")}</td>
+          <td>${escaparVivo(setorDaRota(r))}</td>
           <td class="${cls}">${textoPct(r.percentual)}<div class="barra-pct" aria-hidden="true"><i style="width:${pct}%"></i></div></td>
+          <td>${escaparVivo(principal)}</td>
+          <td><span class="vivo-apoios">${escaparVivo(apoios)}</span></td>
           <td class="${cls}">${escaparVivo(r.status || "—")}</td>
-          <td>${escaparVivo(r.ultimo_gps || "—")}</td>
         </tr>`,
           card: `<article class="rota-movel ${sel}">
           <button type="button" class="rota-abrir" data-abrir="${codigo}">
-            <span class="rota-movel-topo"><strong>${escaparVivo(r.codigo || r.rota || "—")}</strong><span class="${cls}">${textoPct(r.percentual)}</span></span>
+            <span class="rota-movel-topo"><strong>${escaparVivo(r.codigo || "—")}</strong><span class="${cls}">${textoPct(r.percentual)}</span></span>
             <span class="rota-status ${cls}">${escaparVivo(r.status || "—")}</span>
             <span class="barra-pct ${cls}" aria-hidden="true"><i style="width:${pct}%"></i></span>
-            <span class="rota-linha">${escaparVivo(r.veiculo || "—")} · ${escaparVivo(r.placa || "—")}</span>
-            <span class="rota-linha">${lugarVeiculo(r.placa)}</span>
-            <span class="rota-linha">Início ${escaparVivo(horaCurta(r.inicio))} · GPS ${escaparVivo(horaCurta(r.ultimo_gps))}</span>
+            <span class="rota-linha">${escaparVivo(setorDaRota(r))}</span>
+            <span class="rota-linha">Principal ${escaparVivo(principal)}</span>
+            <span class="rota-linha">Apoios ${escaparVivo(apoios)}</span>
           </button>
           <button type="button" class="vivo-ir-mapa" data-codigo="${codigo}">Ver no mapa</button>
         </article>`,
@@ -3684,19 +3751,45 @@
       const codigo = escaparVivo(rota.codigo || "");
       const titulo = escaparVivo(rota.codigo || rota.rota || "—");
       const nomeLongo = rota.rota && rota.rota !== rota.codigo ? `<p class="rota-linha">${escaparVivo(rota.rota)}</p>` : "";
+      const det = detalheCacheDaRota(rota);
+      const executores = executoresDaRota(rota, det);
+      const efetivos = executores.filter((item) => item.papel === "principal" || item.papel === "apoio");
+      const sobrepostos = executores.filter((item) => item.papel === "sobreposta");
+      const passagens = (det && det.passagens) || rota.passagens || [];
+      const pendentes = (det && det.nao_confirmados) || rota.nao_confirmados || [];
+      const chip = (item) => {
+        const papel = String(item.papel || "");
+        const nome = papel === "principal" ? "Principal" : papel === "apoio" ? "Apoio efetivo" : "Cobertura sobreposta";
+        const cor = item.cor || corPlaca(item.placa);
+        const sel = vivoPlacaSelecionada === item.placa ? " sel" : "";
+        const exclusivo = papel === "apoio" && item.contribuicao_exclusiva != null ? " · exclusivo " + Number(item.contribuicao_exclusiva).toFixed(0) + "%" : "";
+        const individual = item.percentual != null ? " · " + Number(item.percentual).toFixed(0) + "%" : "";
+        return `<button type="button" class="vivo-placa${sel}" data-placa="${escaparVivo(item.placa || "")}" style="color:${cor}"><i style="background:${cor}"></i>${nome} ${escaparVivo(item.placa || "—")}${individual}${exclusivo}</button>`;
+      };
+      const blocoEfetivos = efetivos.length
+        ? `<div class="vivo-placas">${efetivos.map(chip).join("")}</div>`
+        : `<p class="vivo-nota">Principal ${escaparVivo(placaDaRota(rota))}. Apoios ${escaparVivo(textoApoio(rota))}.</p>`;
+      const blocoSobre = sobrepostos.length
+        ? `<p class="vivo-secao">Cobertura sobreposta</p><div class="vivo-placas">${sobrepostos.map(chip).join("")}</div><p class="vivo-nota">Execução repetida. Não entra na lista de apoio efetivo e não altera o percentual.</p>`
+        : "";
+      const blocoPassagem = passagens.length
+        ? `<p class="vivo-secao">Passagem</p><p class="vivo-nota">${passagens.map((placa) => escaparVivo(placa)).join(", ")} — não entra na cobertura.</p>`
+        : "";
+      const blocoPendente = pendentes.length
+        ? `<p class="vivo-secao">Não confirmado</p><p class="vivo-nota">${pendentes.map((placa) => escaparVivo(placa)).join(", ")} — não entra na cobertura.</p>`
+        : "";
       const linhas = [
-        ["Status", rota.status],
-        ["Execução", textoPct(rota.percentual)],
-        ["Veículo", rota.veiculo],
-        ["Placa", rota.placa],
+        ["Situação", rota.status],
+        ["Execução consolidada", textoPct(rota.percentual)],
+        ["Principal", placaDaRota(rota)],
+        ["Apoios efetivos", textoApoio(rota)],
         ["Início", rota.inicio || "—"],
         ["Último GPS", rota.ultimo_gps || "—"],
-        ["Entrada", rota.entrada_hora || "—"],
-        ["Saída", rota.saida_hora || "—"],
       ];
       box.innerHTML = `<span class="vivo-alca" aria-hidden="true"></span><div class="rota-movel-topo"><h2 id="vivo-sheet-titulo" style="margin:0;font-size:18px">Rota ${titulo}</h2><button type="button" class="sec vivo-fechar-ficha">Fechar</button></div>${nomeLongo}`
         + `<div class="vivo-ficha-acoes"><button type="button" class="vivo-ir-mapa" data-codigo="${codigo}">Ver no mapa</button><button type="button" class="vivo-so-rota" data-codigo="${codigo}">Ver detalhes da execução</button></div>`
-        + linhas.map(([k, v]) => `<div><b>${k}</b> ${escaparVivo(v || "—")}</div>`).join("");
+        + linhas.map(([k, v]) => `<div><b>${k}</b> ${escaparVivo(v || "—")}</div>`).join("")
+        + blocoEfetivos + blocoSobre + blocoPassagem + blocoPendente;
       box.setAttribute("role", "dialog");
       box.setAttribute("aria-modal", estreito ? "true" : "false");
       box.setAttribute("aria-labelledby", "vivo-sheet-titulo");
@@ -3825,7 +3918,7 @@
       if (telaEstreita()) {
         return `<div class="vivo-popup"><strong>${codigoTxt}</strong><div>${pct}</div><div>${statusTxt}</div></div>`;
       }
-      return `<div class="vivo-popup"><strong>${codigoTxt}</strong><div>${statusTxt} · ${pct}</div><div>${escaparVivo(r.veiculo || "—")}</div><div>${escaparVivo(r.placa || "—")}</div><div>Último GPS ${escaparVivo(r.ultimo_gps || "—")}</div><button type="button" class="vivo-abrir-ficha" data-codigo="${codigoTxt}">Detalhes</button></div>`;
+      return `<div class="vivo-popup"><strong>${codigoTxt}</strong><div>${statusTxt} · ${pct}</div><div>Principal ${escaparVivo(placaDaRota(r))}</div><div>Apoios ${escaparVivo(textoApoio(r))}</div><button type="button" class="vivo-abrir-ficha" data-codigo="${codigoTxt}">Detalhes</button></div>`;
     }
 
     function idadeGps(item) {
@@ -3901,6 +3994,8 @@
       L.control.layers(null, {
         "Rotas oficiais": vivoGrupoRotas,
         "Trajetória GPS": vivoGrupoTrilha,
+        "Trechos executados": vivoGrupoFeitos,
+        "Trechos pendentes": vivoGrupoFalta,
         "Áreas de difícil acesso": vivoGrupoAreas,
         "Difícil acesso": vivoGrupoDificil,
         "Posição atual": vivoGrupoPos,
@@ -4039,7 +4134,7 @@
       const linha = grupo[ponto.placa];
       const estilo = ponto.deslocamento
         ? { color: "#8aa0ab", weight: 2, opacity: 0.45, dashArray: "4 6", smoothFactor: 0 }
-        : { color: "#17324d", weight: 3, opacity: 0.85, smoothFactor: 0 };
+        : { color: corPlaca(ponto.placa), weight: 3, opacity: 0.85, smoothFactor: 0 };
       if (linha) linha.addLatLng(latlng);
       else {
         const criado = L.polyline([latlng], estilo).addTo(vivoGrupoTrilha);
@@ -4163,7 +4258,7 @@
       (pacote.veiculos || []).forEach((veiculo) => {
         (veiculo.linhas || []).forEach((linha) => {
           if (!linha || linha.length < 2) return;
-          const poly = L.polyline(linha, { color: "#17324d", weight: 3, opacity: 0.85, smoothFactor: 0 });
+          const poly = L.polyline(linha, { color: corPlaca(veiculo.placa), weight: 3, opacity: 0.85, smoothFactor: 0 });
           poly._vivoPlaca = veiculo.placa;
           poly._vivoTipo = "trilha";
           poly.addTo(vivoGrupoTrilha);
@@ -4179,7 +4274,11 @@
         });
       });
       vivoCursor = pacote.cursor || "";
-      if (vivoFoco) desenharGpsAzul((rotaVivo(vivoFoco) && rotaVivo(vivoFoco).placa) || "");
+      if (vivoFoco) {
+        const det = vivoDetalheCache[data + "|" + turno + "|" + vivoFoco];
+        if (det) desenharDetalheRota(vivoFoco, det);
+        else desenharGpsAzul(placaDaRota(rotaVivo(vivoFoco)));
+      }
       window.vivoTrilha = vivoTrilha;
       const folha = $("vivo-folha");
       if (folha) folha.dataset.cursor = vivoCursor;
@@ -4342,13 +4441,20 @@
         if (ehBasculante(ponto.placa)) bascula = true;
       });
       if (pacote.cursor) vivoCursor = pacote.cursor;
-      if (vivoFoco) desenharGpsAzul((rotaVivo(vivoFoco) && rotaVivo(vivoFoco).placa) || "");
+      if (vivoFoco && vivoLinhasPlaca.length) {
+        (pacote.pontos || []).forEach((ponto) => {
+          const item = vivoLinhasPlaca.find((linha) => linha.placa === ponto.placa);
+          if (item && ponto.lat != null && ponto.lon != null) item.linha.addLatLng([ponto.lat, ponto.lon]);
+        });
+      } else if (vivoFoco) desenharGpsAzul(placaDaRota(rotaVivo(vivoFoco)));
       if (bascula && !vivoDificilPedido) {
         vivoDificilPedido = carregarDificil(data, turno).finally(() => { vivoDificilPedido = null; });
       }
     }
 
     let vivoGpsDetalhe = [];
+    let vivoLinhasPlaca = [];
+    let vivoPlacaSelecionada = "";
     let vivoDificilAntes = null;
 
     function limparDetalheRota() {
@@ -4374,6 +4480,7 @@
         if (vivoGrupoTrilha) vivoGrupoTrilha.removeLayer(linha);
       });
       vivoGpsDetalhe = [];
+      vivoLinhasPlaca = [];
     }
 
     function marcarLegendaGps(detalhe) {
@@ -4419,7 +4526,7 @@
         vivoGrupoTrilha.eachLayer((linha) => {
           if (!linha.setStyle || linha._vivoAzul) return;
           if (linha._vivoTipo === "desloc") linha.setStyle({ color: "#8aa0ab", weight: 2, opacity: 0.45, dashArray: "4 6" });
-          else linha.setStyle({ color: "#17324d", weight: 3, opacity: 0.85, dashArray: null });
+          else linha.setStyle({ color: corPlaca(linha._vivoPlaca), weight: 3, opacity: 0.85, dashArray: null });
         });
       }
       marcarLegendaGps(false);
@@ -4436,8 +4543,73 @@
 
     const vivoDetalheCache = {};
 
+    function esmaecerTrilhasGerais() {
+      limparGpsAzul();
+      if (!vivoGrupoTrilha) return;
+      vivoGrupoTrilha.eachLayer((linha) => {
+        if (!linha.setStyle || linha._vivoAzul) return;
+        linha.setStyle({ opacity: 0.12, weight: 2 });
+      });
+    }
+
+    function aplicarDestaquePlaca() {
+      vivoLinhasPlaca.forEach((item) => {
+        const ativo = !vivoPlacaSelecionada || item.placa === vivoPlacaSelecionada;
+        item.linha.setStyle({ opacity: ativo ? 0.95 : 0.2, weight: ativo ? item.peso : 2 });
+        if (ativo && item.linha.bringToFront) item.linha.bringToFront();
+      });
+    }
+
+    function desenharTrechosOficiais(colecao, grupo, estilo) {
+      if (!grupo) return;
+      if (!colecao || !Array.isArray(colecao.features)) return;
+      L.geoJSON(colecao, { interactive: false, style: () => estilo }).eachLayer((layer) => grupo.addLayer(layer));
+    }
+
+    function desenharVeiculosDaRota(det) {
+      vivoLinhasPlaca = [];
+      const veiculos = (det && det.veiculos) || [];
+      veiculos.forEach((veiculo) => {
+        const papel = String(veiculo.papel || "");
+        const cor = veiculo.cor || corPlaca(veiculo.placa);
+        const peso = papel === "principal" ? 6 : 5;
+        const nome = papel === "principal" ? "Principal" : papel === "apoio" ? "Apoio efetivo" : papel === "sobreposta" ? "Cobertura sobreposta" : (veiculo.classificacao || "Veículo");
+        (veiculo.linhas || []).forEach((linha) => {
+          if (!linha || linha.length < 2) return;
+          const poly = L.polyline(linha, {
+            color: cor,
+            weight: peso,
+            opacity: 0.95,
+            dashArray: papel === "sobreposta" ? "7 6" : null,
+            lineJoin: "round",
+            lineCap: "round",
+            smoothFactor: 0,
+          }).bindTooltip(nome + " " + (veiculo.placa || ""), { sticky: true });
+          poly._vivoAzul = true;
+          poly._vivoPlaca = veiculo.placa;
+          poly.on("click", (ev) => {
+            if (ev.originalEvent) L.DomEvent.stopPropagation(ev);
+            vivoPlacaSelecionada = vivoPlacaSelecionada === veiculo.placa ? "" : veiculo.placa;
+            aplicarDestaquePlaca();
+            pintarDetalheVivo(rotaVivo(vivoCodigo));
+          });
+          poly.addTo(vivoGrupoTrilha);
+          vivoGpsDetalhe.push(poly);
+          vivoLinhasPlaca.push({ placa: veiculo.placa, linha: poly, peso });
+        });
+      });
+      aplicarDestaquePlaca();
+    }
+
     function desenharDetalheRota(codigo, det) {
       if (!det) return;
+      limparGpsAzul();
+      desenharTrechosOficiais(det.trechos_feitos, vivoGrupoFeitos, { color: "#1b8a5a", weight: 5, opacity: 0.9 });
+      desenharTrechosOficiais(det.trechos_faltando, vivoGrupoFalta, { color: "#b34145", weight: 4, opacity: 0.85, dashArray: "2 6" });
+      if (vivoMapa && vivoGrupoFeitos && !vivoMapa.hasLayer(vivoGrupoFeitos)) vivoGrupoFeitos.addTo(vivoMapa);
+      if (vivoMapa && vivoGrupoFalta && !vivoMapa.hasLayer(vivoGrupoFalta)) vivoGrupoFalta.addTo(vivoMapa);
+      if ((det.veiculos || []).some((item) => (item.linhas || []).length)) desenharVeiculosDaRota(det);
+      else desenharGpsAzul(placaDaRota(rotaVivo(codigo)));
       if (det.entrada) L.circleMarker([det.entrada.lat, det.entrada.lon], { radius: 8, color: "#1b8a5a", fillColor: "#1b8a5a", fillOpacity: 1 }).bindTooltip("Entrada " + (det.entrada.hora || "")).addTo(vivoGrupoEnt);
       if (det.saida) L.circleMarker([det.saida.lat, det.saida.lon], { radius: 8, color: "#b34145", fillColor: "#b34145", fillOpacity: 1 }).bindTooltip("Saída " + (det.saida.hora || "")).addTo(vivoGrupoSai);
       const folha = $("vivo-folha");
@@ -4454,9 +4626,9 @@
       if (!codigo || !garantirMapaVivo()) return;
       vivoFoco = codigo;
       vivoCodigo = codigo;
+      vivoPlacaSelecionada = "";
       atualizarEstiloRotas();
-      const placa = (rotaVivo(codigo) && rotaVivo(codigo).placa) || "";
-      desenharGpsAzul(placa);
+      esmaecerTrilhasGerais();
       ocultarMalhaNoDetalhe();
       const layer = vivoCamadas[codigo];
       if (layer && layer.getBounds && layer.getBounds().isValid()) vivoMapa.fitBounds(layer.getBounds().pad(0.3), { animate: false });
@@ -4478,18 +4650,23 @@
       const chave = data + "|" + turno + "|" + codigo;
       let det = vivoDetalheCache[chave];
       if (!det) {
-        const resp = await fetch("/api/live-report/route-detail?data=" + encodeURIComponent(data) + "&turno=" + encodeURIComponent(turno) + "&rota=" + encodeURIComponent(codigo), { cache: "no-store" });
-        if (resp.ok) {
-          det = await resp.json();
-          vivoDetalheCache[chave] = det;
+        try {
+          const resp = await fetch("/api/live-report/route-detail?data=" + encodeURIComponent(data) + "&turno=" + encodeURIComponent(turno) + "&rota=" + encodeURIComponent(codigo), { cache: "no-store" });
+          if (resp.ok) {
+            det = await resp.json();
+            vivoDetalheCache[chave] = det;
+          }
+        } catch (e) {
+          det = null;
         }
       }
-      desenharDetalheRota(codigo, det);
+      if (det) desenharDetalheRota(codigo, det);
+      else desenharGpsAzul(placaDaRota(rota));
       if (!vivoMapa.hasLayer(vivoGrupoEnt)) vivoGrupoEnt.addTo(vivoMapa);
       if (!vivoMapa.hasLayer(vivoGrupoSai)) vivoGrupoSai.addTo(vivoMapa);
       elevarMarcasDetalhe();
       pintarTabelaVivo();
-      vivoFichaAberta = !telaEstreita();
+      if (!telaEstreita()) vivoFichaAberta = true;
       pintarDetalheVivo(rota);
       atualizarBotoesMapa();
     }
@@ -4621,7 +4798,7 @@
       const data = ($("data-vivo") && $("data-vivo").value) || "";
       const turno = turnoVivo();
       try {
-        const resp = await fetch("/api/live-report?data=" + encodeURIComponent(data) + "&turno=" + encodeURIComponent(turno));
+        const resp = await fetch("/api/live-report?data=" + encodeURIComponent(data) + "&turno=" + encodeURIComponent(turno), { cache: "no-store" });
         const estado = await resp.json();
         if (!resp.ok && !estado.falha) {
           pintarAvisoVivo(vivoEstado, true);
@@ -4734,11 +4911,7 @@
         if (!tr) return;
         vivoCodigo = tr.dataset.codigo || "";
         vivoFichaAberta = true;
-        pintarTabelaVivo();
-        const rota = ((vivoEstado && vivoEstado.rotas) || []).find((r) => r.codigo === vivoCodigo);
-        pintarDetalheVivo(rota || null);
-        focarMapaVivo(vivoCodigo);
-        atualizarBotoesMapa();
+        verSomenteRota(vivoCodigo);
       });
     }
     const listaVivo = $("vivo-lista");
@@ -4752,8 +4925,7 @@
           return;
         }
         vivoFichaAberta = true;
-        pintarTabelaVivo();
-        pintarDetalheVivo(rotaVivo(vivoCodigo));
+        verSomenteRota(vivoCodigo);
       });
     }
     const btnSo = $("vivo-so");
@@ -4824,6 +4996,15 @@
     const cortinaVivo = $("vivo-cortina");
     if (cortinaVivo) cortinaVivo.addEventListener("click", fecharFichaVivo);
     document.addEventListener("click", (ev) => {
+      const placaBtn = ev.target.closest && ev.target.closest(".vivo-placa");
+      if (placaBtn) {
+        ev.preventDefault();
+        const placa = placaBtn.dataset.placa || "";
+        vivoPlacaSelecionada = vivoPlacaSelecionada === placa ? "" : placa;
+        aplicarDestaquePlaca();
+        pintarDetalheVivo(rotaVivo(vivoCodigo));
+        return;
+      }
       const fechar = ev.target.closest && ev.target.closest(".vivo-fechar-ficha");
       if (fechar) {
         ev.preventDefault();
