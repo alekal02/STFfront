@@ -1213,6 +1213,56 @@
     .frota-cards div { background: #f6f8f9; border-radius: 10px; padding: 10px 12px; }
     .frota-cards small { display: block; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .3px; }
     .frota-cards b { font-size: 16px; }
+    button.frota-cond-card {
+      display: block;
+      width: 100%;
+      text-align: left;
+      background: #f6f8f9;
+      color: var(--text);
+      border: 1px solid transparent;
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-weight: 650;
+    }
+    button.frota-cond-card:hover { filter: none; background: #eef3f5; }
+    button.frota-cond-card.ativo,
+    button.frota-cond-card.ativo:hover { background: var(--teal-soft); border-color: var(--teal); }
+    button.frota-cond-card small { display: block; color: var(--muted); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .3px; }
+    button.frota-cond-card b { display: block; font-size: 16px; }
+    .frota-cond-extra { display: block; margin-top: 2px; color: var(--muted); font-size: 12px; font-weight: 650; text-transform: none; letter-spacing: 0; }
+    .frota-ignicao {
+      background: #fff4cc;
+      border: 1px solid #e0b400;
+      color: #5c4a00;
+      border-radius: 10px;
+      padding: 10px 12px;
+      margin: 0 0 12px;
+      font-weight: 650;
+    }
+    .frota-ignicao b { display: block; margin-bottom: 2px; }
+    .frota-ignicao-tag {
+      display: inline-block;
+      background: #fff4cc;
+      border: 1px solid #e0b400;
+      color: #5c4a00;
+      border-radius: 999px;
+      padding: 2px 8px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .frota-nota { margin-top: 0; font-size: 12px; }
+    .frota-ev { display: inline-flex; align-items: center; gap: 6px; font-weight: 650; }
+    .frota-origem {
+      display: inline-block;
+      background: #eef3f5;
+      color: var(--navy);
+      border-radius: 999px;
+      padding: 2px 8px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .frota-origem.estimado { background: #f3eef8; color: #5b3d86; }
+    .frota-origem.api { background: #e7f2ea; color: #1b8a5a; }
     .frota-grafico { width: 100%; overflow-x: auto; }
     .frota-grafico svg { width: 100%; height: auto; min-width: 520px; display: block; }
     .frota-tabela-wrap { overflow: auto; margin-top: 12px; -webkit-overflow-scrolling: touch; }
@@ -1276,7 +1326,8 @@
       border-radius: 10px;
       padding: 8px 12px;
     }
-    #frota-op-placas[hidden], #frota-op-aviso[hidden], #frota-op-erro[hidden], #frota-tel-corpo[hidden] { display: none !important; }
+    #frota-op-placas[hidden], #frota-op-aviso[hidden], #frota-op-erro[hidden], #frota-tel-corpo[hidden],
+    #frota-tel-ignicao[hidden], #frota-rank-resumo[hidden] { display: none !important; }
     @media (max-width: 900px) {
       #aba-frota .vistas { width: 100%; }
       #aba-frota .vistas button { flex: 1; min-height: 44px; padding: 8px 6px; }
@@ -1286,6 +1337,8 @@
       .frota-busca div { align-items: flex-start; flex-wrap: wrap; }
       .frota-filtros .principal, .frota-filtros .sec, .frota-item-acoes .sec { min-height: 44px; width: auto; max-width: 100%; }
       #aba-frota .frota-tabela thead { display: none; }
+      .frota-grafico svg { min-width: 0; }
+      #aba-frota .frota-tabela td { min-width: 0; overflow-wrap: anywhere; }
       #aba-frota .frota-tabela,
       #aba-frota .frota-tabela tbody,
       #aba-frota .frota-tabela tr,
@@ -1692,6 +1745,7 @@
         <button type="button" class="ativo" data-vista="vivo">Ao vivo</button>
         <button type="button" data-vista="paradas">Paradas</button>
         <button type="button" data-vista="telemetria">Telemetria</button>
+        <button type="button" data-vista="conducao">Condução</button>
         <button type="button" data-vista="operacoes">Operações</button>
       </div>
     </section>
@@ -1805,10 +1859,33 @@
         <p class="hint" id="frota-tel-estado">Escolha o caminhão, a data e o turno.</p>
         <div id="frota-tel-corpo" hidden>
           <div class="frota-cards" id="frota-cards"></div>
-          <h2>Velocidade × hora</h2>
+          <h2 class="frota-secao">Condução</h2>
+          <p class="frota-ignicao" id="frota-tel-ignicao" hidden>
+            <b>Ignição sempre ligada</b>
+            A ignição ficou ligada em 100% dos pulsos deste turno. Pode ser motor ligado parado ou instalação do rastreador; vale conferir com a Segtrack.
+          </p>
+          <div class="frota-cards" id="frota-cond-cards"></div>
+          <p class="legenda frota-nota">Frenagem, aceleração e curva são estimadas pelo GPS (pulsos agrupados a cada 10 s), não por acelerômetro.</p>
+          <div class="frota-tabela-wrap">
+            <table class="aud-tabela frota-tabela" id="frota-cond-tabela">
+              <thead>
+                <tr>
+                  <th>Hora</th>
+                  <th>Tipo</th>
+                  <th>Velocidade</th>
+                  <th>Endereço</th>
+                  <th>Duração</th>
+                  <th>Mapa</th>
+                  <th>Origem</th>
+                </tr>
+              </thead>
+              <tbody id="frota-cond-tbody"></tbody>
+            </table>
+          </div>
+          <h2 class="frota-secao">Velocidade × hora</h2>
           <div class="frota-grafico" id="frota-grafico"></div>
-          <p class="legenda">Faixa amarela = parada. Tracejado vermelho = 60 km/h.</p>
-          <h2>Paradas</h2>
+          <p class="legenda">Faixa amarela = parada. Tracejado vermelho = 60 km/h. Ponto vermelho = frenagem · laranja = aceleração · roxo = curva · preto = excesso.</p>
+          <h2 class="frota-secao">Paradas</h2>
           <div class="frota-tabela-wrap">
             <table class="aud-tabela frota-tabela">
               <thead>
@@ -1826,6 +1903,34 @@
               <tbody id="frota-tel-tbody"></tbody>
             </table>
           </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="vista" data-vista-panel="conducao">
+      <div class="card">
+        <div class="frota-filtros">
+          <label class="frota-campo"><span>Data</span><input class="campo" id="frota-cond-data" type="date" title="Data operacional" /></label>
+          <label class="frota-campo"><span>Turno</span>
+            <select class="campo" id="frota-cond-turno" title="Turno">
+              <option value="diurno">Diurno</option>
+              <option value="noturno">Noturno</option>
+            </select>
+          </label>
+          <button type="button" class="principal" id="btn-frota-cond" onclick="consultarConducao()">Consultar</button>
+          <button type="button" class="sec" id="btn-frota-cond-csv" onclick="baixarConducaoCsv()">Baixar CSV</button>
+        </div>
+        <p class="hint" id="frota-cond-estado">Escolha a data e o turno.</p>
+        <div class="frota-cards" id="frota-rank-resumo" hidden>
+          <div><small>Total de eventos</small><b id="frota-rank-total">0</b></div>
+          <div><small>Caminhão com mais eventos</small><b id="frota-rank-topo">—</b></div>
+          <div><small>Tempo ocioso total</small><b id="frota-rank-ocioso">—</b></div>
+        </div>
+        <div class="frota-tabela-wrap">
+          <table class="aud-tabela frota-tabela" id="frota-rank-tabela">
+            <thead><tr id="frota-rank-thead"></tr></thead>
+            <tbody id="frota-rank-tbody"></tbody>
+          </table>
         </div>
       </div>
     </section>
@@ -2335,7 +2440,7 @@
     const paginas = {
       uni: ["Relatório", "Relatório do dia", "Diurno: 06:00–18:59. Noturno: a partir das 19:00 até 05:59. Cada um traz os polígonos do dia e desenha a trajetória dentro deles."],
       admin: ["Administração", "Usuários", "Cadastre, edite, ative e bloqueie o acesso. Somente administradores."],
-      frota: ["Frota", "Frota", "Posição ao vivo, paradas e telemetria dos caminhões."],
+      frota: ["Frota", "Frota", "Posição ao vivo, paradas, telemetria e condução dos caminhões."],
       vivo: ["CCO", "Conclusão de Rotas — Ao Vivo", "SEGTRACK. O painel abre o último estado salvo do turno e continua lendo esse estado em segundo plano."],
       segtrack: ["GPS", "SEGTRACK", "Busca o GPS da SEGTRACK, no dia escolhido no topo."],
       inlog: ["GPS", "Inlog", "Busca o GPS da Inlog e mantém PDF e GPKG."],
@@ -5803,6 +5908,13 @@
     let frotaPdfSoltar = null;
     let frotaOrd = { chave: "inicio", dir: 1 };
     let frotaTelConsultou = false;
+    let frotaTelConducao = null;
+    let frotaCondFiltro = "";
+    let frotaRankCache = [];
+    let frotaRankConsultou = false;
+    let frotaRankOrd = { chave: "eventos", dir: -1 };
+    let frotaRankSeq = 0;
+    let frotaRankAbort = null;
     const FROTA_OP_CHAVE = "frota-operacao";
     let frotaOperacoes = [];
     let frotaOperacaoId = "";
@@ -6013,6 +6125,11 @@
       frotaParadasConsultou = false;
       frotaParAvisos = "";
       frotaTelConsultou = false;
+      frotaTelConducao = null;
+      frotaCondFiltro = "";
+      frotaRankCache = [];
+      frotaRankConsultou = false;
+      frotaRankOrd = { chave: "eventos", dir: -1 };
       pintarContadores();
       pintarListaFrota();
       pintarTabelaParadas([]);
@@ -6030,6 +6147,15 @@
         tel.className = "hint";
         tel.textContent = "Escolha o caminhão, a data e o turno.";
       }
+      pintarTabelaRanking([]);
+      const rankResumo = $("frota-rank-resumo");
+      if (rankResumo) rankResumo.hidden = true;
+      const condEstado = $("frota-cond-estado");
+      if (condEstado) {
+        condEstado.className = "hint";
+        condEstado.textContent = "Escolha a data e o turno.";
+      }
+      renderCabecalhoRanking();
     }
 
     function operacoesAtivas() {
@@ -6249,7 +6375,7 @@
       }
     }
 
-    function recarregarSubAba(refazerPar, refazerTel) {
+    function recarregarSubAba(refazerPar, refazerTel, refazerRank) {
       const nome = subFrota();
       if (nome === "vivo") {
         iniciarFrotaVivo();
@@ -6285,6 +6411,27 @@
         });
         return;
       }
+      if (nome === "conducao") {
+        if (frotaRankAbort) frotaRankAbort.abort();
+        garantirPlacas().then(() => {
+          if (aba !== "frota" || subFrota() !== "conducao") return;
+          const pronto = $("frota-cond-data").value && $("frota-cond-turno").value;
+          if (refazerRank && pronto) consultarConducao();
+          else if (refazerRank) {
+            frotaRankConsultou = false;
+            frotaRankCache = [];
+            pintarTabelaRanking([]);
+            const resumo = $("frota-rank-resumo");
+            if (resumo) resumo.hidden = true;
+            const estado = $("frota-cond-estado");
+            if (estado) {
+              estado.className = "hint";
+              estado.textContent = "Escolha a data e o turno.";
+            }
+          }
+        });
+        return;
+      }
       if (nome === "operacoes") carregarOperacoes();
     }
 
@@ -6296,6 +6443,7 @@
       pararConsultaPdf();
       const refazerPar = frotaParadasConsultou;
       const refazerTel = frotaTelConsultou;
+      const refazerRank = frotaRankConsultou;
       frotaOperacaoId = valor;
       gravarOperacaoSalva(valor);
       atualizarAvisoOperacao();
@@ -6303,7 +6451,8 @@
       frotaVivoSeq += 1;
       if (frotaParAbort) frotaParAbort.abort();
       if (frotaTelAbort) frotaTelAbort.abort();
-      recarregarSubAba(refazerPar, refazerTel);
+      if (frotaRankAbort) frotaRankAbort.abort();
+      recarregarSubAba(refazerPar, refazerTel, refazerRank);
     }
 
     async function aposGravarOperacao() {
@@ -6498,12 +6647,16 @@
       pararFrotaVivo();
       frotaParSeq += 1;
       frotaTelSeq += 1;
+      frotaRankSeq += 1;
       if (frotaParAbort) frotaParAbort.abort();
       if (frotaTelAbort) frotaTelAbort.abort();
+      if (frotaRankAbort) frotaRankAbort.abort();
       const bp = $("btn-frota-par");
       const bt = $("btn-frota-tel");
+      const bc = $("btn-frota-cond");
       if (bp) bp.disabled = false;
       if (bt) bt.disabled = false;
+      if (bc) bc.disabled = false;
     }
 
     function sairFrotaRestrito() {
@@ -6522,10 +6675,10 @@
       const diaCampo = $("data-vivo");
       const dia = (diaCampo && diaCampo.value) || op.data;
       const turno = (diaCampo && diaCampo.value) ? turnoVivo() : op.turno;
-      ["frota-par-data", "frota-tel-data"].forEach((id) => {
+      ["frota-par-data", "frota-tel-data", "frota-cond-data"].forEach((id) => {
         if ($(id) && !$(id).value) $(id).value = dia;
       });
-      ["frota-par-turno", "frota-tel-turno"].forEach((id) => {
+      ["frota-par-turno", "frota-tel-turno", "frota-cond-turno"].forEach((id) => {
         if ($(id)) $(id).value = turno;
       });
     }
@@ -7264,7 +7417,15 @@
       return params.toString();
     }
 
-    function desenharVelocidade(serie, paradas) {
+    function corEventoGrafico(tipo) {
+      if (tipo === "frenagem_brusca") return "#c0392b";
+      if (tipo === "aceleracao_brusca") return "#e07a1f";
+      if (String(tipo || "").indexOf("curva") === 0) return "#6b3fa0";
+      if (tipo === "excesso_velocidade") return "#111111";
+      return "";
+    }
+
+    function desenharVelocidade(serie, paradas, eventos) {
       const box = $("frota-grafico");
       if (!box) return;
       const pts = (serie || []).map((par) => ({
@@ -7277,13 +7438,40 @@
         box.innerHTML = '<p class="hint">Nenhum pulso no período.</p>';
         return;
       }
+      const marcasEv = [];
+      (eventos || []).forEach((ev) => {
+        const cor = corEventoGrafico(ev && ev.tipo);
+        const t = tsMs(ev && ev.data_hora);
+        if (!cor || !Number.isFinite(t)) return;
+        let vel = Number(ev.velocidade);
+        if (!Number.isFinite(vel)) {
+          let melhor = null;
+          let dist = Infinity;
+          pts.forEach((p) => {
+            if (p.v == null) return;
+            const d = Math.abs(p.t - t);
+            if (d < dist) { dist = d; melhor = p.v; }
+          });
+          vel = melhor;
+        }
+        if (!Number.isFinite(vel)) return;
+        marcasEv.push({
+          t: t,
+          v: vel,
+          cor: cor,
+          rotulo: String((ev && (ev.rotulo || ev.tipo)) || ""),
+          hora: fmtBrt(ev.data_hora),
+        });
+      });
       const w = 720;
       const h = 220;
       const pad = { l: 44, r: 16, t: 22, b: 28 };
       const t0 = pts[0].t;
       const t1 = pts[pts.length - 1].t;
       const span = Math.max(t1 - t0, 1);
-      const pico = pts.reduce((m, p) => (p.v == null ? m : Math.max(m, p.v)), 0);
+      const picoSerie = pts.reduce((m, p) => (p.v == null ? m : Math.max(m, p.v)), 0);
+      const picoEv = marcasEv.reduce((m, p) => Math.max(m, p.v), 0);
+      const pico = Math.max(picoSerie, picoEv);
       const yMax = Math.max(10, Math.ceil((pico * 1.15) / 10) * 10);
       const x = (t) => pad.l + ((t - t0) / span) * (w - pad.l - pad.r);
       const y = (v) => pad.t + (1 - (v / yMax)) * (h - pad.t - pad.b);
@@ -7318,11 +7506,24 @@
         : "";
       const ini = fmtBrt(pts[0].iso);
       const fim = fmtBrt(pts[pts.length - 1].iso);
+      const usados = [];
+      let pontosEv = "";
+      marcasEv.forEach((p) => {
+        if (p.t < t0 || p.t > t1) return;
+        const cx = x(p.t);
+        let cy = y(p.v);
+        usados.forEach((u) => {
+          if (Math.abs(u.cx - cx) < 8 && Math.abs(u.cy - cy) < 8) cy = Math.max(pad.t + 4, cy - 9);
+        });
+        usados.push({ cx: cx, cy: cy });
+        const dica = escHtml(p.rotulo + " · " + p.hora);
+        pontosEv += `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="5" fill="${p.cor}" stroke="#fff" stroke-width="1.2"><title>${dica}</title></circle>`;
+      });
       box.innerHTML = `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="Velocidade ao longo do turno">
         <text x="${pad.l}" y="14" fill="#5d717c" font-size="11">km/h</text>
         ${grades}${faixas}${linha60}
         <path d="${d}" fill="none" stroke="#0f7a80" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"></path>
-        ${marcas}
+        ${marcas}${pontosEv}
         <text x="${pad.l}" y="${h - 8}" fill="#5d717c" font-size="11">${ini}</text>
         <text x="${w - pad.r}" y="${h - 8}" text-anchor="end" fill="#5d717c" font-size="11">${fim}</text>
       </svg>`;
@@ -7362,7 +7563,18 @@
           ? "Primeiro pulso " + fmtBrt(tel.primeiro_pulso) + " · último " + fmtBrt(tel.ultimo_pulso) + "."
           : "Nenhum pulso no período.";
       }
-      desenharVelocidade(tel.serie || [], (par && par.paradas) || []);
+      frotaTelConducao = {
+        contagem: tel.contagem || {},
+        eventos: Array.isArray(tel.eventos) ? tel.eventos : [],
+        ocioso: tel.ocioso || {},
+        ignicao_sempre_ligada: !!tel.ignicao_sempre_ligada,
+        alerta_ignicao: tel.alerta_ignicao || "",
+      };
+      frotaCondFiltro = "";
+      pintarAlertaIgnicao();
+      pintarCardsConducao();
+      pintarListaConducao();
+      desenharVelocidade(tel.serie || [], (par && par.paradas) || [], frotaTelConducao.eventos);
       pintarParadasTel((par && par.paradas) || []);
       frotaTelConsultou = true;
     }
@@ -7412,10 +7624,394 @@
       }
     }
 
+    const COND_CARDS = [
+      ["frenagem_brusca", "Frenagem brusca"],
+      ["aceleracao_brusca", "Aceleração brusca"],
+      ["curva_brusca_esquerda", "Curva à esquerda"],
+      ["curva_brusca_direita", "Curva à direita"],
+      ["excesso_velocidade", "Excesso de velocidade"],
+      ["motor_ocioso", "Motor ocioso"],
+    ];
+    const RANK_COLS = [
+      ["posicao", "Posição"],
+      ["placa", "Placa"],
+      ["descricao", "Descrição"],
+      ["frenagem", "Frenagem"],
+      ["aceleracao", "Aceleração"],
+      ["curvas", "Curvas (esq/dir)"],
+      ["excessos", "Excessos"],
+      ["tempo_ocioso_min", "Tempo ocioso"],
+      ["ocioso_percentual", "% ocioso"],
+      ["eventos", "Total de eventos"],
+      ["ignicao", "Alerta de ignição"],
+    ];
+
+    function contagemTipo(contagem, tipo) {
+      const n = contagem ? Number(contagem[tipo]) : 0;
+      return Number.isFinite(n) ? n : 0;
+    }
+
+    function fmtPct(v) {
+      if (v == null || v === "") return "—";
+      const n = Number(v);
+      if (!Number.isFinite(n)) return "—";
+      const casas = Math.abs(n - Math.round(n)) < 0.05 ? 0 : 1;
+      return n.toFixed(casas).replace(".", ",") + "%";
+    }
+
+    function metaEvento(tipo) {
+      const mapa = {
+        frenagem_brusca: ["Frenagem brusca", "#c0392b"],
+        aceleracao_brusca: ["Aceleração brusca", "#e07a1f"],
+        curva_brusca_esquerda: ["Curva à esquerda", "#6b3fa0"],
+        curva_brusca_direita: ["Curva à direita", "#6b3fa0"],
+        curva_brusca: ["Curva brusca", "#6b3fa0"],
+        excesso_velocidade: ["Excesso de velocidade", "#111111"],
+        motor_ocioso: ["Motor ocioso", "#5d717c"],
+      };
+      return mapa[tipo] || [tipo || "Evento", "#5d717c"];
+    }
+
+    function origemEvento(origem) {
+      if (origem === "api") return ["Rastreador", "api"];
+      if (origem === "estimado") return ["Estimado", "estimado"];
+      return ["—", ""];
+    }
+
+    function duracaoEvento(ev) {
+      const tipo = ev && ev.tipo;
+      if (tipo !== "excesso_velocidade" && tipo !== "motor_ocioso") return "—";
+      return fmtDuracao(ev.duracao_min);
+    }
+
+    function linkEvento(ev) {
+      const href = String((ev && ev.link) || "");
+      if (/^https:\/\/(www\.)?google\.com\/maps\?/i.test(href)) {
+        return `<a href="${escHtml(href)}" target="_blank" rel="noopener">Abrir no Google Maps</a>`;
+      }
+      if (ev && coordOk(ev.lat, ev.lon)) return linkMapa(ev);
+      return "—";
+    }
+
+    function textoOciosoCard(ocioso) {
+      const o = ocioso || {};
+      const pct = o.percentual == null || o.percentual === "" ? "—" : fmtPct(o.percentual);
+      return pct + " ocioso · " + fmtDuracao(o.tempo_min);
+    }
+
+    function pintarAlertaIgnicao() {
+      const aviso = $("frota-tel-ignicao");
+      if (!aviso) return;
+      const dados = frotaTelConducao || {};
+      aviso.hidden = !(dados.ignicao_sempre_ligada || dados.alerta_ignicao);
+    }
+
+    function pintarCardsConducao() {
+      const box = $("frota-cond-cards");
+      if (!box) return;
+      const dados = frotaTelConducao || {};
+      const contagem = dados.contagem || {};
+      box.innerHTML = COND_CARDS.map((item) => {
+        const ativo = frotaCondFiltro === item[0];
+        const extra = item[0] === "motor_ocioso"
+          ? `<span class="frota-cond-extra">${escHtml(textoOciosoCard(dados.ocioso))}</span>`
+          : "";
+        return `<button type="button" class="frota-cond-card${ativo ? " ativo" : ""}" data-frota-cond="${item[0]}" aria-pressed="${ativo ? "true" : "false"}"><small>${escHtml(item[1])}</small><b>${contagemTipo(contagem, item[0])}</b>${extra}</button>`;
+      }).join("");
+    }
+
+    function htmlLinhaEvento(ev) {
+      const meta = metaEvento(ev.tipo);
+      const origem = origemEvento(ev.origem);
+      const tipo = `<span class="frota-ev"><span class="frota-ponto" style="background:${meta[1]}"></span>${escHtml(ev.rotulo || meta[0])}</span>`;
+      const tag = origem[1]
+        ? `<span class="frota-origem ${origem[1]}">${escHtml(origem[0])}</span>`
+        : "—";
+      return `<tr>
+        <td data-label="Hora">${escHtml(fmtBrt(ev.data_hora))}</td>
+        <td data-label="Tipo">${tipo}</td>
+        <td data-label="Velocidade">${escHtml(fmtVel(ev.velocidade))}</td>
+        <td data-label="Endereço">${escHtml(ev.endereco || "—")}</td>
+        <td data-label="Duração">${escHtml(duracaoEvento(ev))}</td>
+        <td data-label="Mapa">${linkEvento(ev)}</td>
+        <td data-label="Origem">${tag}</td>
+      </tr>`;
+    }
+
+    function pintarListaConducao() {
+      const body = $("frota-cond-tbody");
+      if (!body) return;
+      const lista = (frotaTelConducao && frotaTelConducao.eventos) || [];
+      const visiveis = frotaCondFiltro ? lista.filter((ev) => ev.tipo === frotaCondFiltro) : lista;
+      if (!visiveis.length) {
+        const msg = lista.length && frotaCondFiltro ? "Nenhum evento deste tipo." : "Nenhum evento no período.";
+        body.innerHTML = `<tr class="frota-vazio"><td colspan="7">${msg}</td></tr>`;
+        return;
+      }
+      body.innerHTML = visiveis.map(htmlLinhaEvento).join("");
+    }
+
+    function alternarFiltroConducao(tipo) {
+      if (!tipo || !frotaTelConducao) return;
+      frotaCondFiltro = frotaCondFiltro === tipo ? "" : tipo;
+      pintarCardsConducao();
+      pintarListaConducao();
+    }
+
+    function textoCurvas(item) {
+      const c = item && item.contagem;
+      return contagemTipo(c, "curva_brusca_esquerda") + "/" + contagemTipo(c, "curva_brusca_direita");
+    }
+
+    function valorRank(item, chave) {
+      if (chave === "frenagem") return contagemTipo(item.contagem, "frenagem_brusca");
+      if (chave === "aceleracao") return contagemTipo(item.contagem, "aceleracao_brusca");
+      if (chave === "curvas") {
+        return contagemTipo(item.contagem, "curva_brusca_esquerda") + contagemTipo(item.contagem, "curva_brusca_direita");
+      }
+      if (chave === "excessos") return contagemTipo(item.contagem, "excesso_velocidade");
+      if (chave === "ignicao") return item.ignicao_sempre_ligada ? 1 : 0;
+      if (chave === "posicao" || chave === "eventos") return Number(item[chave]) || 0;
+      if (chave === "tempo_ocioso_min" || chave === "ocioso_percentual") {
+        const n = Number(item[chave]);
+        return Number.isFinite(n) ? n : -1;
+      }
+      return String(item[chave] || "").toLocaleLowerCase("pt-BR");
+    }
+
+    function prepararRanking(lista) {
+      const linhas = (lista || []).map((item) => Object.assign({}, item));
+      linhas.sort((a, b) =>
+        (Number(b.eventos) || 0) - (Number(a.eventos) || 0)
+        || (Number(b.tempo_ocioso_min) || 0) - (Number(a.tempo_ocioso_min) || 0)
+        || String(a.placa || "").localeCompare(String(b.placa || ""), "pt-BR")
+      );
+      linhas.forEach((item, i) => { item.posicao = i + 1; });
+      return linhas;
+    }
+
+    function rankingVisivel() {
+      const lista = frotaRankCache.slice();
+      lista.sort((a, b) => {
+        const va = valorRank(a, frotaRankOrd.chave);
+        const vb = valorRank(b, frotaRankOrd.chave);
+        if (va < vb) return -1 * frotaRankOrd.dir;
+        if (va > vb) return 1 * frotaRankOrd.dir;
+        return (a.posicao || 0) - (b.posicao || 0);
+      });
+      return lista;
+    }
+
+    function renderCabecalhoRanking() {
+      const tr = $("frota-rank-thead");
+      if (!tr) return;
+      tr.innerHTML = RANK_COLS.map((col) => {
+        const seta = frotaRankOrd.chave === col[0] ? (frotaRankOrd.dir > 0 ? " ↑" : " ↓") : "";
+        return `<th><button type="button" class="frota-ord" data-frota-rank="${col[0]}">${col[1]}${seta}</button></th>`;
+      }).join("");
+    }
+
+    function htmlLinhaRanking(item) {
+      const ign = item.ignicao_sempre_ligada
+        ? '<span class="frota-ignicao-tag">Ignição sempre ligada</span>'
+        : "—";
+      return `<tr data-frota-placa="${escHtml(item.placa)}" title="Abrir telemetria">
+        <td data-label="Posição">${item.posicao}</td>
+        <td data-label="Placa"><b>${escHtml(item.placa || "—")}</b></td>
+        <td data-label="Descrição">${escHtml(item.descricao || "—")}</td>
+        <td data-label="Frenagem">${contagemTipo(item.contagem, "frenagem_brusca")}</td>
+        <td data-label="Aceleração">${contagemTipo(item.contagem, "aceleracao_brusca")}</td>
+        <td data-label="Curvas (esq/dir)">${textoCurvas(item)}</td>
+        <td data-label="Excessos">${contagemTipo(item.contagem, "excesso_velocidade")}</td>
+        <td data-label="Tempo ocioso">${escHtml(fmtDuracao(item.tempo_ocioso_min))}</td>
+        <td data-label="% ocioso">${escHtml(fmtPct(item.ocioso_percentual))}</td>
+        <td data-label="Total de eventos">${Number(item.eventos) || 0}</td>
+        <td data-label="Alerta de ignição">${ign}</td>
+      </tr>`;
+    }
+
+    function pintarTabelaRanking(lista) {
+      renderCabecalhoRanking();
+      const body = $("frota-rank-tbody");
+      if (!body) return;
+      if (!lista.length) {
+        body.innerHTML = frotaRankConsultou
+          ? '<tr class="frota-vazio"><td colspan="11">Nenhum caminhão no período.</td></tr>'
+          : "";
+        return;
+      }
+      body.innerHTML = lista.map(htmlLinhaRanking).join("");
+    }
+
+    function pintarResumoRanking() {
+      const box = $("frota-rank-resumo");
+      if (!box) return;
+      if (!frotaRankConsultou) {
+        box.hidden = true;
+        return;
+      }
+      box.hidden = false;
+      const total = frotaRankCache.reduce((s, item) => s + (Number(item.eventos) || 0), 0);
+      const minutos = frotaRankCache.reduce((s, item) => s + (Number(item.tempo_ocioso_min) || 0), 0);
+      const topo = frotaRankCache[0];
+      if ($("frota-rank-total")) $("frota-rank-total").textContent = String(total);
+      if ($("frota-rank-topo")) {
+        $("frota-rank-topo").textContent = topo ? topo.placa + " · " + (Number(topo.eventos) || 0) : "—";
+      }
+      if ($("frota-rank-ocioso")) $("frota-rank-ocioso").textContent = frotaRankCache.length ? fmtDuracao(minutos) : "—";
+    }
+
+    function pintarRanking() {
+      pintarTabelaRanking(rankingVisivel());
+      pintarResumoRanking();
+    }
+
+    function ordenarRanking(chave) {
+      if (!chave) return;
+      if (frotaRankOrd.chave === chave) frotaRankOrd.dir = -frotaRankOrd.dir;
+      else frotaRankOrd = { chave: chave, dir: chave === "placa" || chave === "descricao" ? 1 : -1 };
+      if (frotaRankConsultou) pintarRanking();
+      else renderCabecalhoRanking();
+    }
+
+    function conducaoDemorada() {
+      if (frotaOperacaoId === "todas") return true;
+      if (!frotaVeiculos || frotaPlacasOp !== frotaOperacaoId) return true;
+      return frotaVeiculos.length > 8;
+    }
+
+    function queryConducao() {
+      const params = new URLSearchParams();
+      if ($("frota-cond-data").value) params.set("data", $("frota-cond-data").value);
+      if ($("frota-cond-turno").value) params.set("turno", $("frota-cond-turno").value);
+      return params.toString();
+    }
+
+    function abrirTelemetriaDaConducao(placa) {
+      if (!placa) return;
+      const data = ($("frota-cond-data") && $("frota-cond-data").value) || "";
+      const turno = ($("frota-cond-turno") && $("frota-cond-turno").value) || "";
+      if ($("frota-tel-data") && data) $("frota-tel-data").value = data;
+      if ($("frota-tel-turno") && turno) $("frota-tel-turno").value = turno;
+      garantirOpcao($("frota-tel-placa"), placa);
+      mostrarVista("frota", "telemetria");
+      carregarTelemetria();
+    }
+
+    async function consultarConducao() {
+      const estado = $("frota-cond-estado");
+      const data = $("frota-cond-data").value;
+      const turno = $("frota-cond-turno").value;
+      if (!data || !turno) {
+        if (estado) {
+          estado.className = "hint";
+          estado.textContent = "Escolha a data e o turno.";
+        }
+        return;
+      }
+      const seq = ++frotaRankSeq;
+      if (frotaRankAbort) frotaRankAbort.abort();
+      const ctrl = new AbortController();
+      frotaRankAbort = ctrl;
+      const op = frotaOperacaoId;
+      const demora = conducaoDemorada();
+      if (estado) {
+        estado.className = demora ? "hint aud-aviso" : "hint";
+        estado.textContent = demora
+          ? "Consultando os caminhões da operação. Pode levar alguns minutos."
+          : "Carregando condução...";
+      }
+      const btn = $("btn-frota-cond");
+      if (btn) btn.disabled = true;
+      try {
+        const info = await apiFrota(urlFrota("/api/frota/eventos?" + queryConducao()), { signal: ctrl.signal });
+        if (seq !== frotaRankSeq || aba !== "frota" || op !== frotaOperacaoId) return;
+        frotaRankCache = prepararRanking(info.caminhoes || []);
+        frotaRankConsultou = true;
+        frotaRankOrd = { chave: "eventos", dir: -1 };
+        pintarRanking();
+        if (estado) {
+          estado.className = "hint";
+          const aviso = resumirAvisos(info.avisos);
+          const n = frotaRankCache.length;
+          const frase = n ? n + (n === 1 ? " caminhão." : " caminhões.") : "Nenhum caminhão no período.";
+          estado.textContent = [aviso, frase].filter(Boolean).join(" ");
+        }
+      } catch (e) {
+        if (e && e.name === "AbortError") return;
+        if (seq !== frotaRankSeq || aba !== "frota" || op !== frotaOperacaoId) return;
+        if (e && e.restrito) return sairFrotaRestrito();
+        frotaRankCache = [];
+        frotaRankConsultou = false;
+        pintarTabelaRanking([]);
+        const resumo = $("frota-rank-resumo");
+        if (resumo) resumo.hidden = true;
+        if (estado) {
+          estado.className = "hint aud-alerta";
+          estado.textContent = e.message || "Falha na API";
+        }
+      } finally {
+        if (seq === frotaRankSeq && btn) btn.disabled = false;
+      }
+    }
+
+    function celulaCsv(valor) {
+      const texto = String(valor ?? "");
+      if (/[;"\r\n]/.test(texto)) return '"' + texto.replace(/"/g, '""') + '"';
+      return texto;
+    }
+
+    function baixarConducaoCsv() {
+      const estado = $("frota-cond-estado");
+      if (!frotaRankConsultou) {
+        if (estado) {
+          estado.className = "hint";
+          estado.textContent = "Consulte a data e o turno antes de baixar o CSV.";
+        }
+        return;
+      }
+      const cab = [
+        "posição",
+        "placa",
+        "descrição",
+        "frenagem",
+        "aceleração",
+        "curvas (esq/dir)",
+        "excessos",
+        "tempo ocioso",
+        "% ocioso",
+        "total de eventos",
+        "alerta de ignição",
+      ];
+      const linhas = rankingVisivel().map((item) => [
+        item.posicao,
+        item.placa || "",
+        item.descricao || "",
+        contagemTipo(item.contagem, "frenagem_brusca"),
+        contagemTipo(item.contagem, "aceleracao_brusca"),
+        textoCurvas(item),
+        contagemTipo(item.contagem, "excesso_velocidade"),
+        fmtDuracao(item.tempo_ocioso_min),
+        fmtPct(item.ocioso_percentual),
+        Number(item.eventos) || 0,
+        item.ignicao_sempre_ligada ? "Ignição sempre ligada" : "",
+      ]);
+      const csv = "\uFEFF" + [cab].concat(linhas).map((cols) => cols.map(celulaCsv).join(";")).join("\r\n");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+      const data = ($("frota-cond-data") && $("frota-cond-data").value) || "conducao";
+      const turno = ($("frota-cond-turno") && $("frota-cond-turno").value) || "";
+      dispararDownload(blob, "conducao-" + data + (turno ? "-" + turno : "") + ".csv");
+      if (estado && aba === "frota") {
+        estado.className = "hint";
+        estado.textContent = "CSV gerado.";
+      }
+    }
+
     function ligarCliqueFrota() {
       if (ligarCliqueFrota.feito) return;
       ligarCliqueFrota.feito = true;
       renderCabecalho();
+      renderCabecalhoRanking();
       const status = $("frota-vivo-status");
       const busca = $("frota-vivo-busca");
       const selOp = $("frota-operacao");
@@ -7436,7 +8032,22 @@
           return;
         }
         const ord = alvo.closest("[data-frota-ord]");
-        if (ord) ordenarParadas(ord.getAttribute("data-frota-ord"));
+        if (ord) {
+          ordenarParadas(ord.getAttribute("data-frota-ord"));
+          return;
+        }
+        const rank = alvo.closest("[data-frota-rank]");
+        if (rank) {
+          ordenarRanking(rank.getAttribute("data-frota-rank"));
+          return;
+        }
+        const cond = alvo.closest("[data-frota-cond]");
+        if (cond) {
+          alternarFiltroConducao(cond.getAttribute("data-frota-cond"));
+          return;
+        }
+        const linha = alvo.closest("tr[data-frota-placa]");
+        if (linha && !alvo.closest("a, button")) abrirTelemetriaDaConducao(linha.getAttribute("data-frota-placa"));
       });
       document.addEventListener("keydown", (ev) => {
         if (ev.key !== "Enter") return;
