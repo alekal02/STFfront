@@ -1242,6 +1242,13 @@
     .frota-pulso { display: flex; flex-direction: column; gap: 1px; }
     .frota-pulso small { color: var(--muted); font-size: 12px; font-weight: 500; }
     .frota-acoes { white-space: nowrap; }
+    .frota-pdf-andamento { margin: 0 0 10px; }
+    .frota-pdf-andamento[hidden],
+    #btn-frota-pdf-cancelar[hidden] { display: none !important; }
+    .frota-pdf-andamento .hint { margin: 0 0 4px; }
+    .frota-pdf-andamento .barra-pct { color: var(--teal); height: 10px; }
+    .frota-pdf-dia { display: inline-flex; align-items: center; gap: 4px; }
+    .frota-pdf-dia svg { display: block; flex: none; }
     .frota-cards[hidden] { display: none !important; }
     button.frota-perigo { background: #a53d40; color: #fff; }
     .aud-ok { color: var(--ok); font-weight: 700; }
@@ -1277,7 +1284,7 @@
       .frota-acoes { white-space: normal; }
       .frota-inline, .frota-inline .campo { width: 100%; }
       .frota-busca div { align-items: flex-start; flex-wrap: wrap; }
-      .frota-filtros .principal, .frota-filtros .sec, .frota-item-acoes .sec { min-height: 44px; width: auto; }
+      .frota-filtros .principal, .frota-filtros .sec, .frota-item-acoes .sec { min-height: 44px; width: auto; max-width: 100%; }
       #aba-frota .frota-tabela thead { display: none; }
       #aba-frota .frota-tabela,
       #aba-frota .frota-tabela tbody,
@@ -1752,6 +1759,14 @@
           <label class="chk"><input type="checkbox" id="frota-par-fora" onchange="filtrarParadas()" /> Só fora da rota</label>
           <button type="button" class="principal" id="btn-frota-par" onclick="consultarParadas()">Consultar</button>
           <button type="button" class="sec" id="btn-frota-csv" onclick="baixarParadasCsv()">Baixar CSV</button>
+          <button type="button" class="sec" id="btn-frota-pdf" onclick="baixarParadasPdf()">Baixar PDF</button>
+          <button type="button" class="sec" id="btn-frota-pdf-cancelar" onclick="cancelarParadasPdf()" hidden>Cancelar</button>
+        </div>
+        <div id="frota-par-pdf" class="frota-pdf-andamento" hidden>
+          <p class="hint" id="frota-par-pdf-msg"></p>
+          <div class="barra-pct" id="frota-par-pdf-barra" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Gerando PDF">
+            <i id="frota-par-pdf-fill" style="width:0%"></i>
+          </div>
         </div>
         <p class="hint" id="frota-par-estado">Escolha a data e o turno para ver as paradas.</p>
         <p class="legenda">Vermelho = fora da rota · verde = dentro · cinza = sem rota.</p>
@@ -1785,6 +1800,7 @@
             </select>
           </label>
           <button type="button" class="principal" id="btn-frota-tel" onclick="carregarTelemetria()">Consultar</button>
+          <button type="button" class="sec" id="btn-frota-tel-pdf" onclick="baixarPdfTelemetria()">PDF das paradas do dia</button>
         </div>
         <p class="hint" id="frota-tel-estado">Escolha o caminhão, a data e o turno.</p>
         <div id="frota-tel-corpo" hidden>
@@ -2401,6 +2417,7 @@
     function mostrarVista(alvo, nome) {
       const root = $("aba-" + alvo);
       if (!root) return;
+      if (alvo === "frota" && nome !== "paradas") pararConsultaPdf();
       root.querySelectorAll(".vistas button").forEach((b) => b.classList.toggle("ativo", b.dataset.vista === nome));
       root.querySelectorAll("[data-vista-panel]").forEach((p) => p.classList.toggle("ativo", p.dataset.vistaPanel === nome));
       if (alvo === "frota") aoMostrarSubFrota(nome);
@@ -5780,6 +5797,10 @@
     let frotaTelSeq = 0;
     let frotaParAbort = null;
     let frotaTelAbort = null;
+    let frotaPdfTimer = 0;
+    let frotaPdfSeq = 0;
+    let frotaPdfAbort = null;
+    let frotaPdfSoltar = null;
     let frotaOrd = { chave: "inicio", dir: 1 };
     let frotaTelConsultou = false;
     const FROTA_OP_CHAVE = "frota-operacao";
@@ -5868,9 +5889,22 @@
       return (hora >= 19 || hora < 6) ? "noturno" : "diurno";
     }
 
+    function jsString(valor) {
+      return String(valor || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+    }
+
     function botaoAbrir(destino, placa, rotulo) {
-      const chamada = "event.stopPropagation(); frotaAbrir('" + destino + "','" + String(placa || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'") + "')";
+      const chamada = "event.stopPropagation(); frotaAbrir('" + jsString(destino) + "','" + jsString(placa) + "')";
       return `<button type="button" class="sec frota-mini" onclick="${escHtml(chamada)}">${rotulo}</button>`;
+    }
+
+    function iconePdf() {
+      return '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M3.5 1.5h5.8L13 5.2V14a.5.5 0 0 1-.5.5h-9a.5.5 0 0 1-.5-.5V2a.5.5 0 0 1 .5-.5zm5.3.8V6H12L8.8 2.3zM4.6 8h1.5c.8 0 1.3.4 1.3 1s-.5 1-1.3 1H5.5v1.1H4.6V8zm.9.6v.8h.5c.3 0 .5-.1.5-.4s-.2-.4-.5-.4h-.5zm2.2-.6h1.5c1 0 1.6.5 1.6 1.3S10.2 10.6 9.2 10.6H7.7V8zm.9.6v1.4h.6c.4 0 .7-.2.7-.7s-.3-.7-.7-.7H8.6z"/></svg>';
+    }
+
+    function botaoPdfDia(placa) {
+      const chamada = "event.stopPropagation(); baixarPdfDoDia('" + jsString(placa) + "', this)";
+      return `<button type="button" class="sec frota-mini frota-pdf-dia" onclick="${escHtml(chamada)}" title="PDF do dia">${iconePdf()}PDF do dia</button>`;
     }
 
     function subFrota() {
@@ -6259,6 +6293,7 @@
       const sel = $("frota-operacao");
       const valor = sel ? sel.value : "";
       if (!valor || valor === frotaOperacaoId) return;
+      pararConsultaPdf();
       const refazerPar = frotaParadasConsultou;
       const refazerTel = frotaTelConsultou;
       frotaOperacaoId = valor;
@@ -6459,6 +6494,7 @@
     }
 
     function cancelarFrotaPesada() {
+      pararConsultaPdf();
       pararFrotaVivo();
       frotaParSeq += 1;
       frotaTelSeq += 1;
@@ -6631,7 +6667,7 @@
           <td data-label="Velocidade">${escHtml(fmtVel(v.velocidade))}</td>
           <td data-label="Ignição">${escHtml(fmtIgnicao(v.ignicao))}</td>
           <td data-label="Último pulso">${htmlPulso(v)}</td>
-          <td class="frota-acoes" data-label="Ações"><div class="frota-item-acoes">${botaoAbrir("telemetria", v.placa, "Ver telemetria")}${botaoAbrir("paradas", v.placa, "Ver paradas")}</div></td>
+          <td class="frota-acoes" data-label="Ações"><div class="frota-item-acoes">${botaoAbrir("telemetria", v.placa, "Ver telemetria")}${botaoAbrir("paradas", v.placa, "Ver paradas")}${botaoPdfDia(v.placa)}</div></td>
         </tr>`).join("");
       }
       if (box) box.scrollTop = topo;
@@ -6914,6 +6950,309 @@
         if (aba !== "frota" || !estado) return;
         estado.className = "hint aud-alerta";
         estado.textContent = erroPainel(e);
+      }
+    }
+
+    function soltarPausaPdf() {
+      if (frotaPdfTimer) {
+        clearTimeout(frotaPdfTimer);
+        frotaPdfTimer = 0;
+      }
+      if (frotaPdfSoltar) {
+        const soltar = frotaPdfSoltar;
+        frotaPdfSoltar = null;
+        soltar();
+      }
+    }
+
+    function restaurarUiPdf() {
+      const btn = $("btn-frota-pdf");
+      const cancelar = $("btn-frota-pdf-cancelar");
+      const box = $("frota-par-pdf");
+      if (btn) {
+        btn.disabled = false;
+        btn.removeAttribute("aria-busy");
+        btn.textContent = "Baixar PDF";
+      }
+      if (cancelar) cancelar.hidden = true;
+      if (box) box.hidden = true;
+    }
+
+    function pararConsultaPdf() {
+      frotaPdfSeq += 1;
+      soltarPausaPdf();
+      if (frotaPdfAbort) {
+        const ctrl = frotaPdfAbort;
+        frotaPdfAbort = null;
+        ctrl.abort();
+      }
+      restaurarUiPdf();
+    }
+
+    function cancelarParadasPdf() {
+      pararConsultaPdf();
+      const estado = $("frota-par-estado");
+      if (estado && aba === "frota" && subFrota() === "paradas") {
+        estado.className = "hint";
+        estado.textContent = "Download cancelado.";
+      }
+    }
+
+    function pdfNaAba() {
+      return aba === "frota" && subFrota() === "paradas";
+    }
+
+    function pausaPdf(ms) {
+      return new Promise((resolve) => {
+        frotaPdfSoltar = resolve;
+        frotaPdfTimer = setTimeout(() => {
+          frotaPdfTimer = 0;
+          const soltar = frotaPdfSoltar;
+          frotaPdfSoltar = null;
+          if (soltar) soltar();
+        }, ms);
+      });
+    }
+
+    function pintarProgressoPdf(msg, progresso) {
+      const box = $("frota-par-pdf");
+      const texto = $("frota-par-pdf-msg");
+      const fill = $("frota-par-pdf-fill");
+      const barra = $("frota-par-pdf-barra");
+      if (box) box.hidden = false;
+      if (texto) texto.textContent = msg || "";
+      const pct = Math.max(0, Math.min(100, Number(progresso) || 0));
+      if (fill) fill.style.width = pct + "%";
+      if (barra) {
+        barra.setAttribute("aria-valuenow", String(Math.round(pct)));
+        barra.setAttribute("aria-label", msg || "Gerando PDF");
+      }
+    }
+
+    function filtrosPdfTela() {
+      const campos = {};
+      const data = ($("frota-par-data") && $("frota-par-data").value) || "";
+      const turno = ($("frota-par-turno") && $("frota-par-turno").value) || "";
+      const placa = ($("frota-par-placa") && $("frota-par-placa").value) || "";
+      const min = ($("frota-par-min") && $("frota-par-min").value) || "";
+      const max = ($("frota-par-max") && $("frota-par-max").value) || "";
+      if (data) campos.data = data;
+      if (turno) campos.turno = turno;
+      if (placa) campos.placa = placa;
+      if (min !== "") campos.min = String(min).replace(",", ".");
+      if (max !== "") campos.max = String(max).replace(",", ".");
+      if ($("frota-par-fora") && $("frota-par-fora").checked) campos.so_fora_da_rota = "1";
+      if (frotaOperacaoId) campos.operacao = frotaOperacaoId;
+      return campos;
+    }
+
+    function paramsPdf(campos) {
+      const params = new URLSearchParams();
+      Object.keys(campos || {}).forEach((chave) => {
+        if (chave === "operacao") return;
+        const valor = campos[chave];
+        if (valor !== undefined && valor !== null && String(valor) !== "") params.set(chave, String(valor));
+      });
+      return params;
+    }
+
+    function nomeArquivoPdf(res) {
+      const disp = (res && res.headers && res.headers.get("Content-Disposition")) || "";
+      const estrela = /filename\*\s*=\s*(?:UTF-8''|utf-8'')?([^;]+)/i.exec(disp);
+      if (estrela) {
+        const bruto = estrela[1].trim().replace(/^"(.*)"$/, "$1");
+        try { return decodeURIComponent(bruto); } catch (e) { return bruto; }
+      }
+      const aspas = /filename\s*=\s*"([^"]+)"/i.exec(disp);
+      if (aspas) return aspas[1];
+      const solto = /filename\s*=\s*([^;]+)/i.exec(disp);
+      if (solto) return solto[1].trim().replace(/^"|"$/g, "");
+      return "paradas.pdf";
+    }
+
+    function dispararDownload(blob, nome) {
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = nome || "paradas.pdf";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+    }
+
+    async function concluirPdf(res) {
+      if (res.status === 401) {
+        const data = await res.json().catch(() => ({}));
+        const msg = (data && data.erro) || "Faça login para continuar.";
+        mostrarLogin(msg);
+        const err = new Error(msg);
+        err.login = true;
+        throw err;
+      }
+      if (res.status === 403) {
+        const err = new Error("Acesso restrito ao administrador");
+        err.restrito = true;
+        throw err;
+      }
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error((data && data.erro) || "Não foi possível baixar o PDF.");
+      }
+      const blob = await res.blob();
+      dispararDownload(blob, nomeArquivoPdf(res));
+    }
+
+    function mostrarErroPdf(estadoId, e) {
+      const estado = $(estadoId);
+      if (!estado || aba !== "frota") return;
+      estado.className = "hint aud-alerta";
+      estado.textContent = erroPainel(e);
+    }
+
+    function tratarErroPdf(e, estadoId) {
+      if (!e || e.name === "AbortError" || e.login) return;
+      if (e.restrito) {
+        sairFrotaRestrito();
+        return;
+      }
+      mostrarErroPdf(estadoId, e);
+    }
+
+    async function baixarPdfCaminhao(placa, data, turno, botao, estadoId) {
+      if (!placa || !data || !turno) {
+        const estado = $(estadoId);
+        if (estado) {
+          estado.className = "hint";
+          estado.textContent = estadoId === "frota-tel-estado"
+            ? "Escolha o caminhão, a data e o turno."
+            : "Informe a data e o turno.";
+        }
+        return;
+      }
+      const rotulo = botao ? botao.innerHTML : "";
+      if (botao) {
+        botao.disabled = true;
+        botao.setAttribute("aria-busy", "true");
+        botao.textContent = "Gerando PDF...";
+      }
+      const params = new URLSearchParams();
+      params.set("placa", placa);
+      params.set("data", data);
+      params.set("turno", turno);
+      try {
+        const res = await fetch(urlFrota("/api/frota/paradas.pdf?" + params.toString()), { cache: "no-store" });
+        await concluirPdf(res);
+      } catch (e) {
+        tratarErroPdf(e, estadoId);
+      } finally {
+        if (botao && botao.isConnected) {
+          botao.disabled = false;
+          botao.removeAttribute("aria-busy");
+          botao.innerHTML = rotulo;
+        }
+      }
+    }
+
+    function baixarPdfTelemetria() {
+      const placa = ($("frota-tel-placa") && $("frota-tel-placa").value) || "";
+      const data = ($("frota-tel-data") && $("frota-tel-data").value) || "";
+      const turno = ($("frota-tel-turno") && $("frota-tel-turno").value) || "";
+      return baixarPdfCaminhao(placa, data, turno, $("btn-frota-tel-pdf"), "frota-tel-estado");
+    }
+
+    function baixarPdfDoDia(placa, botao) {
+      const op = turnoOperacional(new Date());
+      return baixarPdfCaminhao(placa, op.data, op.turno, botao, "frota-vivo-estado");
+    }
+
+    async function acompanharPdf(jobId, seq) {
+      while (seq === frotaPdfSeq) {
+        if (!pdfNaAba()) {
+          pararConsultaPdf();
+          return;
+        }
+        const info = await apiFrota(
+          urlFrota("/api/frota/paradas.pdf/andamento?job_id=" + encodeURIComponent(jobId)),
+          { signal: frotaPdfAbort.signal }
+        );
+        if (seq !== frotaPdfSeq) return;
+        if (info && info.erro) throw new Error(String(info.erro));
+        pintarProgressoPdf((info && info.msg) || "Gerando PDF...", info && info.progresso);
+        if (info && info.pronto) {
+          const res = await fetch(
+            urlFrota("/api/frota/paradas.pdf/baixar?job_id=" + encodeURIComponent(jobId)),
+            { signal: frotaPdfAbort.signal, cache: "no-store" }
+          );
+          if (seq !== frotaPdfSeq) return;
+          await concluirPdf(res);
+          const estado = $("frota-par-estado");
+          if (estado && seq === frotaPdfSeq && pdfNaAba()) {
+            estado.className = "hint";
+            estado.textContent = "PDF gerado.";
+          }
+          return;
+        }
+        await pausaPdf(3000);
+      }
+    }
+
+    async function iniciarPdfFrota(seq, campos) {
+      const corpo = Object.assign({}, campos);
+      delete corpo.placa;
+      const qs = paramsPdf(corpo).toString();
+      const info = await apiFrota(
+        urlFrota("/api/frota/paradas.pdf/iniciar" + (qs ? "?" + qs : "")),
+        Object.assign(pedidoFrota("POST", corpo), { signal: frotaPdfAbort.signal })
+      );
+      if (seq !== frotaPdfSeq) return;
+      if (!info || !info.job_id) throw new Error("Não foi possível iniciar o PDF.");
+      await acompanharPdf(info.job_id, seq);
+    }
+
+    async function baixarParadasPdf() {
+      const estado = $("frota-par-estado");
+      if (!$("frota-par-data").value || !$("frota-par-turno").value) {
+        if (estado) {
+          estado.className = "hint";
+          estado.textContent = "Informe a data e o turno.";
+        }
+        return;
+      }
+      pararConsultaPdf();
+      const seq = frotaPdfSeq;
+      frotaPdfAbort = new AbortController();
+      const btn = $("btn-frota-pdf");
+      if (btn) {
+        btn.disabled = true;
+        btn.setAttribute("aria-busy", "true");
+        btn.textContent = "Gerando PDF...";
+      }
+      const campos = filtrosPdfTela();
+      try {
+        if (campos.placa) {
+          const res = await fetch(urlFrota("/api/frota/paradas.pdf?" + paramsPdf(campos).toString()), {
+            signal: frotaPdfAbort.signal,
+            cache: "no-store",
+          });
+          if (seq !== frotaPdfSeq) return;
+          await concluirPdf(res);
+          if (seq !== frotaPdfSeq) return;
+          if (estado && pdfNaAba()) {
+            estado.className = "hint";
+            estado.textContent = "PDF gerado.";
+          }
+        } else {
+          const cancelar = $("btn-frota-pdf-cancelar");
+          if (cancelar) cancelar.hidden = false;
+          pintarProgressoPdf("Na fila.", 0);
+          await iniciarPdfFrota(seq, campos);
+        }
+      } catch (e) {
+        if (!e || e.name === "AbortError" || seq !== frotaPdfSeq) return;
+        tratarErroPdf(e, "frota-par-estado");
+      } finally {
+        if (seq === frotaPdfSeq) restaurarUiPdf();
       }
     }
 
@@ -7437,7 +7776,8 @@
       });
     }
     document.addEventListener("click", (ev) => {
-      const link = ev.target.closest && ev.target.closest("a[href]");
+      const link = ev.target && ev.target.closest && ev.target.closest("a[href]");
+      if (!link) return;
       const href = link.getAttribute("href") || "";
       if (!href || href.charAt(0) === "#") return;
       const absoluto = urlApi(href);
