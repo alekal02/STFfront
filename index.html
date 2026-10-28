@@ -1239,23 +1239,80 @@
       box-shadow: 0 1px 3px rgba(16, 32, 40, .35);
       white-space: nowrap;
     }
+    .frota-pulso { display: flex; flex-direction: column; gap: 1px; }
+    .frota-pulso small { color: var(--muted); font-size: 12px; font-weight: 500; }
+    .frota-acoes { white-space: nowrap; }
+    .frota-cards[hidden] { display: none !important; }
+    button.frota-perigo { background: #a53d40; color: #fff; }
+    .aud-ok { color: var(--ok); font-weight: 700; }
+    .aud-alerta { color: var(--err); font-weight: 700; }
+    .aud-aviso { color: var(--warn); font-weight: 700; }
+    .hint.aud-alerta { color: var(--err); font-weight: 700; }
+    .hint.aud-aviso { color: var(--warn); font-weight: 700; }
+    #aba-frota .vistas { flex-wrap: wrap; width: auto; max-width: 100%; }
+    #frota-operacao { width: min(420px, 100%); }
+    .frota-placa { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+    .frota-placa .frota-tag { background: var(--teal); }
+    .frota-aviso { color: var(--warn); font-weight: 700; font-size: 12px; }
+    .frota-inline .campo { width: 180px; }
+    .card h2.frota-secao { margin: 18px 0 10px; }
+    .frota-manual { margin: 4px 0 12px; }
+    .frota-manual summary { cursor: pointer; color: var(--teal); font-weight: 650; font-size: 13px; }
+    .frota-inline { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+    .frota-busca { display: grid; gap: 6px; margin-top: 8px; }
+    .frota-busca div {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      background: #f6f8f9;
+      border-radius: 10px;
+      padding: 8px 12px;
+    }
+    #frota-op-placas[hidden], #frota-op-aviso[hidden], #frota-op-erro[hidden], #frota-tel-corpo[hidden] { display: none !important; }
     @media (max-width: 900px) {
       #aba-frota .vistas { width: 100%; }
       #aba-frota .vistas button { flex: 1; min-height: 44px; padding: 8px 6px; }
-      .frota-layout { grid-template-columns: 1fr; }
-      .frota-mapa { height: 52vh; min-height: 280px; }
-      .frota-lista { max-height: 50vh; }
-      .frota-campo, .frota-filtros .campo, .frota-filtros select.campo { width: 100%; }
+      .frota-campo, .frota-filtros .campo, .frota-filtros select.campo, #frota-operacao { width: 100%; }
+      .frota-acoes { white-space: normal; }
+      .frota-inline, .frota-inline .campo { width: 100%; }
+      .frota-busca div { align-items: flex-start; flex-wrap: wrap; }
       .frota-filtros .principal, .frota-filtros .sec, .frota-item-acoes .sec { min-height: 44px; width: auto; }
-      .frota-tabela thead { display: block; }
-      .frota-tabela thead tr { display: flex; gap: 8px; overflow-x: auto; }
-      .frota-tabela th { border: 0; flex: none; }
-      .frota-tabela, .frota-tabela tbody { display: block; }
-      .frota-tabela tbody tr { display: grid; gap: 2px; padding: 10px 0; border-bottom: 1px solid var(--line); }
-      .frota-tabela td { border: 0; padding: 2px 0; }
-      .frota-tabela td::before { content: attr(data-rotulo); display: block; color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .3px; text-transform: uppercase; }
-      .frota-tabela tr.frota-ativa { background: var(--teal-soft); }
-      button.frota-ord { min-height: 44px; padding: 8px 10px; background: #eef3f5; border-radius: 8px; }
+      #aba-frota .frota-tabela thead { display: none; }
+      #aba-frota .frota-tabela,
+      #aba-frota .frota-tabela tbody,
+      #aba-frota .frota-tabela tr,
+      #aba-frota .frota-tabela td { display: block; width: 100%; }
+      #aba-frota .frota-tabela tr {
+        background: #f6f8f9;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        margin: 0 0 10px;
+        padding: 8px 12px;
+      }
+      #aba-frota .frota-tabela td {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 12px;
+        border-bottom: 0;
+        padding: 4px 0;
+        text-align: right;
+      }
+      #aba-frota .frota-tabela td::before {
+        content: attr(data-label);
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: .3px;
+        text-transform: uppercase;
+        text-align: left;
+        flex: none;
+      }
+      #aba-frota .frota-tabela td.frota-acoes { justify-content: flex-start; }
+      #aba-frota .frota-tabela td.frota-acoes::before { content: none; }
+      #aba-frota .frota-tabela tr.frota-vazio td { display: block; text-align: left; color: var(--muted); }
+      #aba-frota .frota-tabela tr.frota-vazio td::before { content: none; }
     }
     @media (max-width: 720px) {
       .acesso-senha { grid-template-columns: 1fr; }
@@ -1615,10 +1672,20 @@
 
   <main id="aba-frota" class="painel" hidden>
     <section class="card">
+      <div class="frota-filtros">
+        <label class="frota-campo"><span>Operação</span>
+          <select class="campo" id="frota-operacao" title="Operação (região)">
+            <option value="">Carregando...</option>
+          </select>
+        </label>
+      </div>
+      <p class="hint aud-aviso" id="frota-op-aviso" hidden>Todos os veículos da conta, no país inteiro. Paradas da frota toda podem demorar.</p>
+      <p class="hint aud-alerta" id="frota-op-erro" hidden></p>
       <div class="vistas" data-alvo="frota">
         <button type="button" class="ativo" data-vista="vivo">Ao vivo</button>
         <button type="button" data-vista="paradas">Paradas</button>
         <button type="button" data-vista="telemetria">Telemetria</button>
+        <button type="button" data-vista="operacoes">Operações</button>
       </div>
     </section>
 
@@ -1632,9 +1699,35 @@
         </div>
         <p class="hint" id="frota-vivo-estado">A posição atualiza a cada 30 segundos enquanto esta aba está aberta.</p>
         <p class="legenda">Verde = movimento · amarelo = parado · laranja = atrasado · cinza = sem sinal.</p>
-        <div class="frota-layout">
-          <div id="frota-mapa-vivo" class="frota-mapa"></div>
-          <div id="frota-lista" class="frota-lista"></div>
+        <div class="frota-filtros">
+          <label class="frota-campo"><span>Status</span>
+            <select class="campo" id="frota-vivo-status" title="Filtrar por status">
+              <option value="">Todos</option>
+              <option value="movimento">Em movimento</option>
+              <option value="parado">Parados</option>
+              <option value="atrasado">Atrasados</option>
+              <option value="sem_sinal">Sem sinal</option>
+            </select>
+          </label>
+          <label class="frota-campo"><span>Placa</span>
+            <input class="campo" id="frota-vivo-busca" type="search" placeholder="Buscar placa" title="Buscar por placa" autocomplete="off" />
+          </label>
+        </div>
+        <div class="frota-tabela-wrap" id="frota-lista">
+          <table class="aud-tabela frota-tabela">
+            <thead>
+              <tr>
+                <th>Placa</th>
+                <th>Descrição</th>
+                <th>Status</th>
+                <th>Velocidade</th>
+                <th>Ignição</th>
+                <th>Último pulso</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="frota-vivo-tbody"></tbody>
+          </table>
         </div>
       </div>
     </section>
@@ -1656,15 +1749,19 @@
           </label>
           <label class="frota-campo"><span>Mín (min)</span><input class="campo frota-num" id="frota-par-min" type="number" min="0" step="1" value="5" title="Duração mínima" /></label>
           <label class="frota-campo"><span>Máx (min)</span><input class="campo frota-num" id="frota-par-max" type="number" min="0" step="1" value="60" title="Duração máxima" /></label>
-          <label class="chk"><input type="checkbox" id="frota-par-fora" /> Só fora da rota</label>
-          <button type="button" class="principal" id="btn-frota-par">Consultar</button>
-          <button type="button" class="sec" id="btn-frota-csv">Baixar CSV</button>
+          <label class="chk"><input type="checkbox" id="frota-par-fora" onchange="filtrarParadas()" /> Só fora da rota</label>
+          <button type="button" class="principal" id="btn-frota-par" onclick="consultarParadas()">Consultar</button>
+          <button type="button" class="sec" id="btn-frota-csv" onclick="baixarParadasCsv()">Baixar CSV</button>
         </div>
         <p class="hint" id="frota-par-estado">Escolha a data e o turno para ver as paradas.</p>
-        <p class="legenda">Vermelho = fora da rota · azul = dentro · cinza = sem rota. O círculo cresce com a duração.</p>
-        <div id="frota-mapa-par" class="frota-mapa"></div>
+        <p class="legenda">Vermelho = fora da rota · verde = dentro · cinza = sem rota.</p>
+        <div class="frota-cards" id="frota-par-resumo" hidden>
+          <div><small>Total de paradas</small><b id="frota-par-total">0</b></div>
+          <div><small>Tempo total parado</small><b id="frota-par-tempo">—</b></div>
+          <div><small>Paradas fora da rota</small><b id="frota-par-fora-n">0</b></div>
+        </div>
         <div class="frota-tabela-wrap">
-          <table class="frota-tabela">
+          <table class="aud-tabela frota-tabela">
             <thead><tr id="frota-thead"></tr></thead>
             <tbody id="frota-tbody"></tbody>
           </table>
@@ -1687,7 +1784,7 @@
               <option value="noturno">Noturno</option>
             </select>
           </label>
-          <button type="button" class="principal" id="btn-frota-tel">Consultar</button>
+          <button type="button" class="principal" id="btn-frota-tel" onclick="carregarTelemetria()">Consultar</button>
         </div>
         <p class="hint" id="frota-tel-estado">Escolha o caminhão, a data e o turno.</p>
         <div id="frota-tel-corpo" hidden>
@@ -1695,8 +1792,96 @@
           <h2>Velocidade × hora</h2>
           <div class="frota-grafico" id="frota-grafico"></div>
           <p class="legenda">Faixa amarela = parada. Tracejado vermelho = 60 km/h.</p>
-          <div id="frota-mapa-tel" class="frota-mapa"></div>
+          <h2>Paradas</h2>
+          <div class="frota-tabela-wrap">
+            <table class="aud-tabela frota-tabela">
+              <thead>
+                <tr>
+                  <th>Caminhão</th>
+                  <th>Início</th>
+                  <th>Fim</th>
+                  <th>Duração</th>
+                  <th>Endereço</th>
+                  <th>Rota</th>
+                  <th>Sinal</th>
+                  <th>Mapa</th>
+                </tr>
+              </thead>
+              <tbody id="frota-tel-tbody"></tbody>
+            </table>
+          </div>
         </div>
+      </div>
+    </section>
+
+    <section class="vista" data-vista-panel="operacoes">
+      <div class="card">
+        <p class="hint" id="frota-ops-estado"></p>
+        <div class="frota-tabela-wrap">
+          <table class="aud-tabela frota-tabela">
+            <thead>
+              <tr>
+                <th>Nome</th>
+                <th>Veículos agora</th>
+                <th>Placas fixadas</th>
+                <th>Padrão</th>
+                <th>Ativa</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="frota-ops-tbody"></tbody>
+          </table>
+        </div>
+        <div id="frota-op-placas" hidden>
+          <h2 class="frota-secao" id="frota-op-placas-titulo">Placas fixadas</h2>
+          <p class="hint">Placas fixadas aparecem na operação mesmo fora da área (ex.: oficina).</p>
+          <div class="frota-tabela-wrap">
+            <table class="aud-tabela frota-tabela">
+              <thead>
+                <tr>
+                  <th>Placa</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="frota-op-placas-tbody"></tbody>
+            </table>
+          </div>
+          <div class="frota-filtros">
+            <label class="frota-campo"><span>Buscar placa</span>
+              <input class="campo" id="frota-op-busca" type="search" placeholder="Placa ou descrição" title="Buscar veículo para fixar" autocomplete="off" />
+            </label>
+          </div>
+          <p class="hint" id="frota-op-placas-msg"></p>
+          <div class="frota-busca" id="frota-op-busca-lista"></div>
+        </div>
+        <h2 class="frota-secao">Nova operação</h2>
+        <div class="frota-filtros">
+          <label class="frota-campo"><span>Nome</span>
+            <input class="campo" id="frota-op-nome" type="text" placeholder="Senador Canedo" title="Nome da operação" autocomplete="off" />
+          </label>
+          <label class="frota-campo"><span>Cidade</span>
+            <input class="campo" id="frota-op-cidade" type="text" placeholder="Senador Canedo, GO" title="Cidade da operação" autocomplete="off" />
+          </label>
+          <button type="button" class="principal" id="btn-frota-op-criar" onclick="criarOperacaoFrota()">Salvar</button>
+        </div>
+        <details class="frota-manual" id="frota-op-manual">
+          <summary>Informar limites manualmente</summary>
+          <div class="frota-filtros">
+            <label class="frota-campo"><span>Lat mín</span>
+              <input class="campo" id="frota-op-lat-min" type="text" inputmode="decimal" placeholder="-16,72" title="Latitude mínima" autocomplete="off" />
+            </label>
+            <label class="frota-campo"><span>Lat máx</span>
+              <input class="campo" id="frota-op-lat-max" type="text" inputmode="decimal" placeholder="-16,62" title="Latitude máxima" autocomplete="off" />
+            </label>
+            <label class="frota-campo"><span>Lon mín</span>
+              <input class="campo" id="frota-op-lon-min" type="text" inputmode="decimal" placeholder="-49,15" title="Longitude mínima" autocomplete="off" />
+            </label>
+            <label class="frota-campo"><span>Lon máx</span>
+              <input class="campo" id="frota-op-lon-max" type="text" inputmode="decimal" placeholder="-49,05" title="Longitude máxima" autocomplete="off" />
+            </label>
+          </div>
+        </details>
+        <p class="hint" id="frota-op-nova-msg"></p>
       </div>
     </section>
   </main>
@@ -5587,22 +5772,31 @@
       ["com_lacuna", "Sinal"],
     ];
     let frotaVeiculos = null;
-    let frotaSel = "";
-    let frotaMarcadores = {};
     let frotaTimer = 0;
-    let frotaVivoOcupado = false;
-    let frotaVivoEnquadrou = false;
     let frotaParadasCache = [];
-    let frotaParadasVisiveis = [];
     let frotaParadasConsultou = false;
     let frotaParAvisos = "";
-    let frotaParSel = "";
-    let frotaParCamadas = {};
     let frotaParSeq = 0;
     let frotaTelSeq = 0;
     let frotaParAbort = null;
     let frotaTelAbort = null;
     let frotaOrd = { chave: "inicio", dir: 1 };
+    let frotaTelConsultou = false;
+    const FROTA_OP_CHAVE = "frota-operacao";
+    let frotaOperacoes = [];
+    let frotaOperacaoId = "";
+    let frotaOpsSeq = 0;
+    let frotaVivoSeq = 0;
+    let frotaPlacasSeq = 0;
+    let frotaPlacasOp = "";
+    let frotaAssinaturaOp = "";
+    let frotaOpAberta = null;
+    let frotaExcluirId = null;
+    let frotaRenomearId = null;
+    let frotaBuscaTimer = 0;
+    let frotaBuscaSeq = 0;
+    let frotaBuscaCache = [];
+    let frotaGravando = false;
 
     function fmtBrt(iso) {
       const m = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/.exec(String(iso || ""));
@@ -5643,8 +5837,8 @@
       if (min == null || min === "") return "sem pulso";
       const n = Number(min);
       if (!Number.isFinite(n)) return "sem pulso";
-      if (n < 1) return "último pulso há menos de 1 min";
-      return "último pulso há " + Math.round(n) + " min";
+      if (n < 1) return "há menos de 1 min";
+      return "há " + Math.round(n) + " min";
     }
 
     function tsMs(iso) {
@@ -5657,42 +5851,31 @@
       if (lat == null || lon == null || lat === "" || lon === "") return false;
       const la = Number(lat);
       const lo = Number(lon);
-      return Number.isFinite(la) && Number.isFinite(lo) && Math.abs(la) <= 90 && Math.abs(lo) <= 180 && !(la === 0 && lo === 0);
+      return Number.isFinite(la) && Number.isFinite(lo) && Math.abs(la) <= 90 && Math.abs(lo) <= 180;
+    }
+
+    function turnoSugerido(data) {
+      let hora = new Date().getHours();
+      try {
+        hora = Number(new Intl.DateTimeFormat("en-GB", {
+          timeZone: "America/Sao_Paulo",
+          hour: "2-digit",
+          hourCycle: "h23",
+        }).format(new Date()));
+      } catch (e) { /* fica no relógio local */ }
+      const semana = diaDaSemana(data || hojeIso());
+      if (semana === 6) return (hora >= 15 || hora < 5) ? "noturno" : "diurno";
+      return (hora >= 19 || hora < 6) ? "noturno" : "diurno";
     }
 
     function botaoAbrir(destino, placa, rotulo) {
-      return `<button type="button" class="sec frota-mini" data-frota-ir="${escHtml(destino)}" data-frota-placa-ir="${escHtml(placa)}">${escHtml(rotulo)}</button>`;
+      const chamada = "event.stopPropagation(); frotaAbrir('" + destino + "','" + String(placa || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'") + "')";
+      return `<button type="button" class="sec frota-mini" onclick="${escHtml(chamada)}">${rotulo}</button>`;
     }
 
     function subFrota() {
       const btn = document.querySelector("#aba-frota .vistas button.ativo");
       return (btn && btn.dataset.vista) || "vivo";
-    }
-
-    function criarMapaFrota(id) {
-      const el = $(id);
-      if (!el) return Promise.resolve(null);
-      if (el._mapa) return Promise.resolve(el._mapa);
-      if (el._criando) return el._criando;
-      el._criando = Promise.resolve().then(() => {
-        if (el._mapa) return el._mapa;
-        if (!window.L) throw new Error("Não foi possível carregar o mapa.");
-        el.textContent = "";
-        const mapa = L.map(el, { zoomControl: true }).setView([-16.82, -49.24], 12);
-        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-          attribution: "&copy; OpenStreetMap",
-          maxZoom: 19,
-        }).addTo(mapa);
-        mapa._camada = L.layerGroup().addTo(mapa);
-        el._mapa = mapa;
-        setTimeout(() => mapa.invalidateSize(), 60);
-        return mapa;
-      }).catch((e) => {
-        el._criando = null;
-        el.textContent = (e && e.message) || "Não foi possível carregar o mapa.";
-        return null;
-      });
-      return el._criando;
     }
 
     async function apiFrota(path, opts) {
@@ -5704,12 +5887,12 @@
         throw new Error(erroPainel(e));
       }
       if (res.status === 401) {
-        const data = await res.json().catch(() => ({}));
-        const msg = (data && data.erro) || "Faça login para continuar.";
+        const dataLogin = await res.json().catch(() => ({}));
+        const msg = (dataLogin && dataLogin.erro) || "Faça login para continuar.";
         if (document.body.classList.contains("auth-ok")) mostrarLogin(msg);
-        const err = new Error(msg);
-        err.login = true;
-        throw err;
+        const errLogin = new Error(msg);
+        errLogin.login = true;
+        throw errLogin;
       }
       if (res.status === 403) {
         const err = new Error("Acesso restrito ao administrador");
@@ -5719,6 +5902,553 @@
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error((data && data.erro) || "Falha na API");
       return data;
+    }
+
+    function lerOperacaoSalva() {
+      try {
+        return localStorage.getItem(FROTA_OP_CHAVE) || "";
+      } catch (e) {
+        return "";
+      }
+    }
+
+    function gravarOperacaoSalva(valor) {
+      try {
+        localStorage.setItem(FROTA_OP_CHAVE, String(valor || ""));
+      } catch (e) { /* o navegador pode bloquear o armazenamento */ }
+    }
+
+    function urlFrota(path) {
+      const texto = String(path || "");
+      if (!frotaOperacaoId) return texto;
+      const junta = texto.indexOf("?") >= 0 ? "&" : "?";
+      return texto + junta + "operacao=" + encodeURIComponent(frotaOperacaoId);
+    }
+
+    function pedidoFrota(method, corpo) {
+      const headers = {};
+      const opts = { method: method, headers: headers };
+      if (corpo !== undefined) {
+        headers["Content-Type"] = "application/json";
+        opts.body = JSON.stringify(corpo);
+      }
+      return opts;
+    }
+
+    function msgFrota(id, texto, erro) {
+      const el = $(id);
+      if (!el) return;
+      el.className = erro ? "hint aud-alerta" : "hint";
+      el.textContent = texto || "";
+    }
+
+    function mostrarErroOperacao(texto) {
+      const el = $("frota-op-erro");
+      if (!el) return;
+      el.hidden = !texto;
+      el.textContent = texto || "";
+    }
+
+    function atualizarAvisoOperacao() {
+      const aviso = $("frota-op-aviso");
+      if (aviso) aviso.hidden = frotaOperacaoId !== "todas";
+    }
+
+    function fmtCoord(n) {
+      const v = Number(n);
+      if (!Number.isFinite(v)) return "—";
+      return v.toLocaleString("pt-BR", { maximumFractionDigits: 4 });
+    }
+
+    function textoArea(op) {
+      return "Área encontrada: latitude " + fmtCoord(op.lat_min) + " a " + fmtCoord(op.lat_max)
+        + " · longitude " + fmtCoord(op.lon_min) + " a " + fmtCoord(op.lon_max) + ".";
+    }
+
+    function placaIgual(a, b) {
+      const limpa = (p) => String(p || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+      const na = limpa(a);
+      return !!na && na === limpa(b);
+    }
+
+    function limparConsultaOperacao() {
+      frotaVeiculos = null;
+      frotaPlacasOp = "";
+      preencherPlacas([]);
+      frotaParadasCache = [];
+      frotaParadasConsultou = false;
+      frotaParAvisos = "";
+      frotaTelConsultou = false;
+      pintarContadores();
+      pintarListaFrota();
+      pintarTabelaParadas([]);
+      const resumo = $("frota-par-resumo");
+      if (resumo) resumo.hidden = true;
+      const par = $("frota-par-estado");
+      if (par) {
+        par.className = "hint";
+        par.textContent = "Escolha a data e o turno para ver as paradas.";
+      }
+      const corpo = $("frota-tel-corpo");
+      if (corpo) corpo.hidden = true;
+      const tel = $("frota-tel-estado");
+      if (tel) {
+        tel.className = "hint";
+        tel.textContent = "Escolha o caminhão, a data e o turno.";
+      }
+    }
+
+    function operacoesAtivas() {
+      return frotaOperacoes.filter((op) => op.ativa);
+    }
+
+    function assinaturaOperacaoAtual() {
+      if (frotaOperacaoId === "todas") return "todas";
+      const op = frotaOperacoes.find((item) => String(item.id) === String(frotaOperacaoId));
+      if (!op) return "";
+      return String(op.qtd) + "|" + (op.placas || []).join(",");
+    }
+
+    function resolverOperacao() {
+      const anterior = frotaOperacaoId;
+      const ativas = operacoesAtivas();
+      const salva = lerOperacaoSalva();
+      let valor = "";
+      if (salva === "todas") valor = "todas";
+      else if (salva && ativas.some((op) => String(op.id) === String(salva))) valor = String(salva);
+      else {
+        const padrao = ativas.find((op) => op.padrao);
+        valor = padrao ? String(padrao.id) : (ativas.length ? String(ativas[0].id) : "todas");
+        if (salva && salva !== valor) gravarOperacaoSalva(valor);
+      }
+      frotaOperacaoId = valor;
+      if (valor !== anterior && anterior) limparConsultaOperacao();
+      return valor !== anterior;
+    }
+
+    let frotaOpTrocando = false;
+
+    function pintarSeletorOperacao() {
+      const sel = $("frota-operacao");
+      if (!sel) return;
+      frotaOpTrocando = true;
+      try {
+        const opts = operacoesAtivas().map((op) => {
+          const qtd = Number(op.qtd);
+          const n = Number.isFinite(qtd) ? qtd : 0;
+          return `<option value="${escHtml(String(op.id))}">${escHtml(op.nome)} · ${n}</option>`;
+        }).join("");
+        sel.innerHTML = opts + '<option value="todas">Todas as operações</option>';
+        if ([...sel.options].some((o) => o.value === frotaOperacaoId)) sel.value = frotaOperacaoId;
+        else if (sel.options.length) {
+          sel.value = sel.options[0].value;
+          frotaOperacaoId = sel.value;
+        }
+        atualizarAvisoOperacao();
+      } finally {
+        frotaOpTrocando = false;
+      }
+    }
+
+    function celulaNomeOperacao(op) {
+      if (frotaRenomearId === op.id) {
+        return `<td data-label="Nome"><div class="frota-inline"><input class="campo" id="frota-renomear-input" data-id="${op.id}" value="${escHtml(op.nome)}" aria-label="Novo nome" autocomplete="off" /></div></td>`;
+      }
+      return `<td data-label="Nome"><b>${escHtml(op.nome)}</b></td>`;
+    }
+
+    function botoesOperacao(op) {
+      if (frotaExcluirId === op.id) {
+        return `<span>Excluir ${escHtml(op.nome)}?</span>
+          <button type="button" class="frota-perigo frota-mini" data-frota-acao="excluir" data-id="${op.id}">Excluir</button>
+          <button type="button" class="sec frota-mini" data-frota-acao="excluir-cancelar" data-id="${op.id}">Cancelar</button>`;
+      }
+      if (frotaRenomearId === op.id) {
+        return `<button type="button" class="sec frota-mini" data-frota-acao="renomear-salvar" data-id="${op.id}">Salvar</button>
+          <button type="button" class="sec frota-mini" data-frota-acao="renomear-cancelar" data-id="${op.id}">Cancelar</button>`;
+      }
+      const padrao = op.padrao
+        ? ""
+        : `<button type="button" class="sec frota-mini" data-frota-acao="padrao" data-id="${op.id}">Definir como padrão</button>`;
+      const excluir = op.padrao
+        ? ""
+        : `<button type="button" class="sec frota-mini" data-frota-acao="excluir-pedir" data-id="${op.id}">Excluir</button>`;
+      const placas = frotaOpAberta === op.id ? "Fechar" : "Placas";
+      return `${padrao}
+        <button type="button" class="sec frota-mini" data-frota-acao="ativa" data-id="${op.id}">${op.ativa ? "Desativar" : "Ativar"}</button>
+        <button type="button" class="sec frota-mini" data-frota-acao="renomear" data-id="${op.id}">Renomear</button>
+        <button type="button" class="sec frota-mini" data-frota-acao="placas" data-id="${op.id}">${placas}</button>
+        ${excluir}`;
+    }
+
+    function pintarTabelaOperacoes() {
+      const body = $("frota-ops-tbody");
+      if (!body) return;
+      if (!frotaOperacoes.length) {
+        body.innerHTML = '<tr class="frota-vazio"><td colspan="6">Nenhuma operação.</td></tr>';
+        return;
+      }
+      body.innerHTML = frotaOperacoes.map((op) => {
+        const placas = (op.placas || []).length;
+        const qtd = Number(op.qtd);
+        const n = Number.isFinite(qtd) ? qtd : 0;
+        return `<tr>
+          ${celulaNomeOperacao(op)}
+          <td data-label="Veículos agora">${n}</td>
+          <td data-label="Placas fixadas">${placas}</td>
+          <td data-label="Padrão">${op.padrao ? "Sim" : "Não"}</td>
+          <td data-label="Ativa">${op.ativa ? "Sim" : "Não"}</td>
+          <td class="frota-acoes" data-label="Ações"><div class="frota-item-acoes">${botoesOperacao(op)}</div></td>
+        </tr>`;
+      }).join("");
+      const inp = $("frota-renomear-input");
+      if (inp) {
+        inp.focus();
+        inp.select();
+      }
+    }
+
+    function pintarPlacasFixadas(op) {
+      const titulo = $("frota-op-placas-titulo");
+      if (titulo) titulo.textContent = "Placas fixadas · " + (op.nome || "");
+      const body = $("frota-op-placas-tbody");
+      if (!body) return;
+      const placas = op.placas || [];
+      if (!placas.length) {
+        body.innerHTML = '<tr class="frota-vazio"><td colspan="2">Nenhuma placa fixada.</td></tr>';
+        return;
+      }
+      body.innerHTML = placas.map((placa) => `<tr>
+        <td data-label="Placa"><b>${escHtml(placa)}</b></td>
+        <td class="frota-acoes" data-label="Ações"><button type="button" class="sec frota-mini" data-frota-acao="remover-placa" data-placa="${escHtml(placa)}">Remover</button></td>
+      </tr>`).join("");
+    }
+
+    function pintarBuscaVeiculos(lista) {
+      const box = $("frota-op-busca-lista");
+      if (!box) return;
+      const op = frotaOperacoes.find((item) => item.id === frotaOpAberta);
+      const fixadas = (op && op.placas) || [];
+      if (!lista || !lista.length) {
+        box.innerHTML = "";
+        return;
+      }
+      box.innerHTML = lista.map((v) => {
+        const extra = [v.descricao && v.descricao !== v.placa ? v.descricao : "", v.cidade || ""].filter(Boolean).join(" · ");
+        const ja = fixadas.some((placa) => placaIgual(placa, v.placa));
+        const acao = ja
+          ? "<span>Fixada</span>"
+          : `<button type="button" class="sec frota-mini" data-frota-acao="fixar" data-placa="${escHtml(v.placa)}">Fixar</button>`;
+        return `<div><span><b>${escHtml(v.placa)}</b>${extra ? " · " + escHtml(extra) : ""}</span>${acao}</div>`;
+      }).join("");
+    }
+
+    function sincronizarPlacasAbertas() {
+      const box = $("frota-op-placas");
+      if (!frotaOpAberta) {
+        if (box) box.hidden = true;
+        return;
+      }
+      const op = frotaOperacoes.find((item) => item.id === frotaOpAberta);
+      if (!op) {
+        frotaOpAberta = null;
+        if (box) box.hidden = true;
+        return;
+      }
+      if (box) box.hidden = false;
+      pintarPlacasFixadas(op);
+      pintarBuscaVeiculos(frotaBuscaCache);
+    }
+
+    function abrirPlacas(id, manter) {
+      const op = frotaOperacoes.find((item) => item.id === id);
+      const box = $("frota-op-placas");
+      if (!op || !box) return;
+      frotaOpAberta = id;
+      box.hidden = false;
+      if (!manter) {
+        frotaBuscaSeq += 1;
+        clearTimeout(frotaBuscaTimer);
+        frotaBuscaCache = [];
+        if ($("frota-op-busca")) $("frota-op-busca").value = "";
+        pintarBuscaVeiculos([]);
+        msgFrota("frota-op-placas-msg", "", false);
+      }
+      pintarPlacasFixadas(op);
+      if (manter) pintarBuscaVeiculos(frotaBuscaCache);
+    }
+
+    async function carregarOperacoes() {
+      const seq = ++frotaOpsSeq;
+      if (!frotaOperacoes.length) msgFrota("frota-ops-estado", "Carregando operações...", false);
+      try {
+        const info = await apiFrota(urlFrota("/api/frota/operacoes"));
+        if (seq !== frotaOpsSeq || aba !== "frota") return false;
+        frotaOperacoes = info.operacoes || [];
+        resolverOperacao();
+        pintarSeletorOperacao();
+        pintarTabelaOperacoes();
+        sincronizarPlacasAbertas();
+        const assinatura = assinaturaOperacaoAtual();
+        if (frotaAssinaturaOp && assinatura !== frotaAssinaturaOp) {
+          frotaVeiculos = null;
+          frotaPlacasOp = "";
+        }
+        frotaAssinaturaOp = assinatura;
+        mostrarErroOperacao("");
+        const estadoOps = $("frota-ops-estado");
+        if (estadoOps && (estadoOps.textContent === "Carregando operações..." || estadoOps.classList.contains("aud-alerta"))) {
+          msgFrota("frota-ops-estado", "", false);
+        }
+        return true;
+      } catch (e) {
+        if (e && e.name === "AbortError") return false;
+        if (seq !== frotaOpsSeq || aba !== "frota") return false;
+        if (e && e.restrito) {
+          sairFrotaRestrito();
+          return false;
+        }
+        const texto = (e && e.message) || "Falha na API";
+        msgFrota("frota-ops-estado", texto, true);
+        mostrarErroOperacao(texto);
+        return false;
+      }
+    }
+
+    function recarregarSubAba(refazerPar, refazerTel) {
+      const nome = subFrota();
+      if (nome === "vivo") {
+        iniciarFrotaVivo();
+        return;
+      }
+      pararFrotaVivo();
+      if (nome === "paradas") {
+        if (frotaParAbort) frotaParAbort.abort();
+        garantirPlacas().then(() => {
+          if (aba !== "frota" || subFrota() !== "paradas") return;
+          if (refazerPar) consultarParadas();
+        });
+        return;
+      }
+      if (nome === "telemetria") {
+        if (frotaTelAbort) frotaTelAbort.abort();
+        const placa = ($("frota-tel-placa") && $("frota-tel-placa").value) || "";
+        garantirPlacas().then(() => {
+          if (aba !== "frota" || subFrota() !== "telemetria") return;
+          const sel = $("frota-tel-placa");
+          if (placa && sel && [...sel.options].some((o) => o.value === placa)) sel.value = placa;
+          const pronto = sel && sel.value && $("frota-tel-data").value && $("frota-tel-turno").value;
+          if (refazerTel && pronto) carregarTelemetria();
+          else if (refazerTel) {
+            frotaTelConsultou = false;
+            if ($("frota-tel-corpo")) $("frota-tel-corpo").hidden = true;
+            const estado = $("frota-tel-estado");
+            if (estado) {
+              estado.className = "hint";
+              estado.textContent = "Escolha o caminhão, a data e o turno.";
+            }
+          }
+        });
+        return;
+      }
+      if (nome === "operacoes") carregarOperacoes();
+    }
+
+    function aoMudarOperacao() {
+      if (frotaOpTrocando) return;
+      const sel = $("frota-operacao");
+      const valor = sel ? sel.value : "";
+      if (!valor || valor === frotaOperacaoId) return;
+      const refazerPar = frotaParadasConsultou;
+      const refazerTel = frotaTelConsultou;
+      frotaOperacaoId = valor;
+      gravarOperacaoSalva(valor);
+      atualizarAvisoOperacao();
+      limparConsultaOperacao();
+      frotaVivoSeq += 1;
+      if (frotaParAbort) frotaParAbort.abort();
+      if (frotaTelAbort) frotaTelAbort.abort();
+      recarregarSubAba(refazerPar, refazerTel);
+    }
+
+    async function aposGravarOperacao() {
+      await carregarOperacoes();
+    }
+
+    async function gravarOperacao(method, path, corpo) {
+      if (frotaGravando) return;
+      frotaGravando = true;
+      try {
+        await apiFrota(urlFrota(path), pedidoFrota(method, corpo));
+        frotaExcluirId = null;
+        frotaRenomearId = null;
+        msgFrota("frota-ops-estado", "", false);
+        await aposGravarOperacao();
+      } catch (e) {
+        if (e && e.name === "AbortError") return;
+        if (e && e.restrito) return sairFrotaRestrito();
+        msgFrota("frota-ops-estado", (e && e.message) || "Falha na API", true);
+      } finally {
+        frotaGravando = false;
+      }
+    }
+
+    async function acaoOperacao(acao, id) {
+      const op = frotaOperacoes.find((item) => String(item.id) === String(id));
+      if (!op && acao !== "excluir-cancelar" && acao !== "renomear-cancelar") return;
+      if (acao === "excluir-pedir") {
+        frotaExcluirId = op.id;
+        frotaRenomearId = null;
+        pintarTabelaOperacoes();
+        return;
+      }
+      if (acao === "excluir-cancelar") {
+        frotaExcluirId = null;
+        pintarTabelaOperacoes();
+        return;
+      }
+      if (acao === "excluir") {
+        await gravarOperacao("DELETE", "/api/frota/operacoes/" + op.id);
+        return;
+      }
+      if (acao === "renomear") {
+        frotaRenomearId = op.id;
+        frotaExcluirId = null;
+        pintarTabelaOperacoes();
+        return;
+      }
+      if (acao === "renomear-cancelar") {
+        frotaRenomearId = null;
+        pintarTabelaOperacoes();
+        return;
+      }
+      if (acao === "renomear-salvar") {
+        const inp = $("frota-renomear-input");
+        const nome = inp ? inp.value.trim() : "";
+        await gravarOperacao("PUT", "/api/frota/operacoes/" + id, { nome: nome });
+        return;
+      }
+      if (acao === "padrao") {
+        await gravarOperacao("PUT", "/api/frota/operacoes/" + op.id, { padrao: true });
+        return;
+      }
+      if (acao === "ativa") {
+        await gravarOperacao("PUT", "/api/frota/operacoes/" + op.id, { ativa: !op.ativa });
+        return;
+      }
+      if (acao === "placas") {
+        if (frotaOpAberta === op.id) {
+          frotaOpAberta = null;
+          frotaBuscaSeq += 1;
+          clearTimeout(frotaBuscaTimer);
+          const box = $("frota-op-placas");
+          if (box) box.hidden = true;
+        } else {
+          abrirPlacas(op.id, false);
+        }
+        pintarTabelaOperacoes();
+      }
+    }
+
+    async function mutarPlaca(method, path, corpo) {
+      if (frotaGravando) return;
+      frotaGravando = true;
+      try {
+        await apiFrota(urlFrota(path), pedidoFrota(method, corpo));
+        msgFrota("frota-op-placas-msg", "", false);
+        await aposGravarOperacao();
+      } catch (e) {
+        if (e && e.name === "AbortError") return;
+        if (e && e.restrito) return sairFrotaRestrito();
+        msgFrota("frota-op-placas-msg", (e && e.message) || "Falha na API", true);
+      } finally {
+        frotaGravando = false;
+      }
+    }
+
+    function fixarPlacaOperacao(placa) {
+      if (!frotaOpAberta || !placa) return;
+      return mutarPlaca("POST", "/api/frota/operacoes/" + frotaOpAberta + "/placas", { placa: placa });
+    }
+
+    function removerPlacaOperacao(placa) {
+      if (!frotaOpAberta || !placa) return;
+      return mutarPlaca("DELETE", "/api/frota/operacoes/" + frotaOpAberta + "/placas/" + encodeURIComponent(placa));
+    }
+
+    function agendarBuscaPlaca() {
+      clearTimeout(frotaBuscaTimer);
+      const termo = (($("frota-op-busca") && $("frota-op-busca").value) || "").trim();
+      if (!termo) {
+        frotaBuscaSeq += 1;
+        frotaBuscaCache = [];
+        pintarBuscaVeiculos([]);
+        msgFrota("frota-op-placas-msg", "", false);
+        return;
+      }
+      frotaBuscaTimer = setTimeout(() => buscarVeiculosFixar(termo), 300);
+    }
+
+    async function buscarVeiculosFixar(termo) {
+      const seq = ++frotaBuscaSeq;
+      const op = frotaOpAberta;
+      msgFrota("frota-op-placas-msg", "Buscando...", false);
+      try {
+        const info = await apiFrota(urlFrota("/api/frota/veiculos?busca=" + encodeURIComponent(termo)));
+        if (seq !== frotaBuscaSeq || op !== frotaOpAberta) return;
+        frotaBuscaCache = info.veiculos || [];
+        pintarBuscaVeiculos(frotaBuscaCache);
+        msgFrota("frota-op-placas-msg", frotaBuscaCache.length ? "" : "Nenhum veículo encontrado.", false);
+      } catch (e) {
+        if (e && e.name === "AbortError") return;
+        if (seq !== frotaBuscaSeq || op !== frotaOpAberta) return;
+        if (e && e.restrito) return sairFrotaRestrito();
+        frotaBuscaCache = [];
+        pintarBuscaVeiculos([]);
+        msgFrota("frota-op-placas-msg", (e && e.message) || "Falha na API", true);
+      }
+    }
+
+    function corpoNovaOperacao() {
+      const nome = (($("frota-op-nome") && $("frota-op-nome").value) || "").trim();
+      const cidade = (($("frota-op-cidade") && $("frota-op-cidade").value) || "").trim();
+      const manual = $("frota-op-manual") && $("frota-op-manual").open;
+      const ler = (id) => (($(id) && $(id).value) || "").trim();
+      const latMin = ler("frota-op-lat-min");
+      const latMax = ler("frota-op-lat-max");
+      const lonMin = ler("frota-op-lon-min");
+      const lonMax = ler("frota-op-lon-max");
+      if (manual && (latMin || latMax || lonMin || lonMax)) {
+        return { nome: nome, lat_min: latMin, lat_max: latMax, lon_min: lonMin, lon_max: lonMax };
+      }
+      return { nome: nome, cidade: cidade };
+    }
+
+    async function criarOperacaoFrota() {
+      if (frotaGravando) return;
+      frotaGravando = true;
+      const btn = $("btn-frota-op-criar");
+      if (btn) btn.disabled = true;
+      msgFrota("frota-op-nova-msg", "Salvando a operação...", false);
+      try {
+        const info = await apiFrota(urlFrota("/api/frota/operacoes"), pedidoFrota("POST", corpoNovaOperacao()));
+        const op = (info && info.operacao) || {};
+        msgFrota("frota-op-nova-msg", textoArea(op), false);
+        if ($("frota-op-nome")) $("frota-op-nome").value = "";
+        if ($("frota-op-cidade")) $("frota-op-cidade").value = "";
+        ["frota-op-lat-min", "frota-op-lat-max", "frota-op-lon-min", "frota-op-lon-max"].forEach((id) => {
+          if ($(id)) $(id).value = "";
+        });
+        if ($("frota-op-manual")) $("frota-op-manual").open = false;
+        await aposGravarOperacao();
+      } catch (e) {
+        if (e && e.name === "AbortError") return;
+        if (e && e.restrito) return sairFrotaRestrito();
+        msgFrota("frota-op-nova-msg", (e && e.message) || "Falha na API", true);
+      } finally {
+        frotaGravando = false;
+        if (btn) btn.disabled = false;
+      }
     }
 
     function pararFrotaVivo() {
@@ -5767,23 +6497,24 @@
     function entrarFrota() {
       prepararFiltrosFrota();
       ligarCliqueFrota();
-      aoMostrarSubFrota(subFrota());
+      if (!frotaOperacaoId) {
+        const salva = lerOperacaoSalva();
+        if (salva) frotaOperacaoId = salva;
+      }
+      carregarOperacoes().then((ok) => {
+        if (!ok || aba !== "frota" || !frotaOperacaoId) return;
+        aoMostrarSubFrota(subFrota());
+      });
     }
 
     function aoMostrarSubFrota(nome) {
+      if (!frotaOperacaoId) return;
       if (nome === "vivo") iniciarFrotaVivo();
       else {
         pararFrotaVivo();
-        garantirPlacas();
+        if (nome === "operacoes") carregarOperacoes();
+        else garantirPlacas();
       }
-      const ids = { vivo: "frota-mapa-vivo", paradas: "frota-mapa-par", telemetria: "frota-mapa-tel" };
-      const id = ids[nome];
-      if (!id) return;
-      criarMapaFrota(id).then((mapa) => {
-        if (!mapa) return;
-        mapa.invalidateSize();
-        setTimeout(() => mapa.invalidateSize(), 80);
-      });
     }
 
     function iniciarFrotaVivo() {
@@ -5821,19 +6552,19 @@
     }
 
     async function garantirPlacas() {
-      if (frotaVeiculos && frotaVeiculos.length) return;
-      if (garantirPlacas.ocupado) return;
-      garantirPlacas.ocupado = true;
+      if (frotaVeiculos && frotaPlacasOp === frotaOperacaoId) return;
+      const seq = ++frotaPlacasSeq;
+      const op = frotaOperacaoId;
       try {
-        const info = await apiFrota("/api/frota/ao-vivo");
-        if (aba !== "frota") return;
+        const info = await apiFrota(urlFrota("/api/frota/ao-vivo"));
+        if (seq !== frotaPlacasSeq || aba !== "frota" || op !== frotaOperacaoId) return;
         frotaVeiculos = info.veiculos || [];
+        frotaPlacasOp = op;
         preencherPlacas(frotaVeiculos);
       } catch (e) {
-        if (e && (e.name === "AbortError" || e.login)) return;
-        if (aba === "frota" && e && e.restrito) sairFrotaRestrito();
-      } finally {
-        garantirPlacas.ocupado = false;
+        if (e && e.name === "AbortError") return;
+        if (seq !== frotaPlacasSeq || aba !== "frota") return;
+        if (e && e.restrito) sairFrotaRestrito();
       }
     }
 
@@ -5845,107 +6576,65 @@
       if ($("frota-n-sem")) $("frota-n-sem").textContent = n("sem_sinal");
     }
 
-    function htmlItemFrota(v) {
+    function veiculosVisiveis() {
+      const status = ($("frota-vivo-status") && $("frota-vivo-status").value) || "";
+      const busca = (($("frota-vivo-busca") && $("frota-vivo-busca").value) || "").trim().toLowerCase();
+      const ordem = { movimento: 0, parado: 1, atrasado: 2, sem_sinal: 3 };
+      return (frotaVeiculos || []).filter((v) => {
+        if (status && v.status !== status) return false;
+        if (busca && !String(v.placa || "").toLowerCase().includes(busca)) return false;
+        return true;
+      }).sort((a, b) =>
+        (ordem[a.status] ?? 9) - (ordem[b.status] ?? 9) || String(a.placa).localeCompare(String(b.placa), "pt-BR")
+      );
+    }
+
+    function marcasVivo(v) {
+      let html = "";
+      if (v && v.fixado) html += '<span class="frota-tag">Fixado</span>';
+      if (v && v.fora_da_area) html += '<span class="frota-aviso">Fora da área</span>';
+      return html;
+    }
+
+    function tagStatus(v) {
       const cor = FROTA_COR[v.status] || FROTA_COR.sem_sinal;
       const texto = v.status === "parado" ? "#3a2e00" : "#fff";
-      const ativo = v.placa === frotaSel;
-      const desc = v.descricao && v.descricao !== v.placa ? `<small>${escHtml(v.descricao)}</small>` : "";
-      const acoes = ativo
-        ? `<div class="frota-item-acoes">${botaoAbrir("telemetria", v.placa, "Ver telemetria")}${botaoAbrir("paradas", v.placa, "Ver paradas")}</div>`
-        : "";
-      return `<div class="frota-item${ativo ? " ativo" : ""}" data-frota-placa="${escHtml(v.placa)}">
-        <div class="frota-item-topo"><b>${escHtml(v.placa)}</b><span class="frota-tag" style="background:${cor};color:${texto}">${escHtml(FROTA_ROTULO[v.status] || "Sem sinal")}</span></div>
-        ${desc}
-        <small>${escHtml(fmtVel(v.velocidade))} · ignição ${escHtml(fmtIgnicao(v.ignicao))} · ${escHtml(fmtPulso(v.minutos))}</small>
-        ${acoes}
-      </div>`;
+      return `<span class="frota-tag" style="background:${cor};color:${texto}">${escHtml(FROTA_ROTULO[v.status] || "Sem sinal")}</span>`;
+    }
+
+    function htmlPulso(v) {
+      const quando = fmtBrt(v.data_gps);
+      const ha = fmtPulso(v.minutos);
+      if (quando === "—") return escHtml(ha);
+      return `<span class="frota-pulso">${escHtml(quando)}<small>${escHtml(ha)}</small></span>`;
     }
 
     function pintarListaFrota() {
+      const body = $("frota-vivo-tbody");
       const box = $("frota-lista");
-      if (!box) return;
-      const topo = box.scrollTop;
-      const ordem = { movimento: 0, parado: 1, atrasado: 2, sem_sinal: 3 };
-      const lista = (frotaVeiculos || []).slice().sort((a, b) =>
-        (ordem[a.status] ?? 9) - (ordem[b.status] ?? 9) || String(a.placa).localeCompare(String(b.placa), "pt-BR")
-      );
-      box.innerHTML = lista.map(htmlItemFrota).join("");
-      box.scrollTop = topo;
-    }
-
-    function iconeFrota(v, ativo) {
-      const cor = FROTA_COR[v.status] || FROTA_COR.sem_sinal;
-      const texto = v.status === "parado" ? "#3a2e00" : "#fff";
-      const borda = ativo ? "outline:2px solid #12232e;outline-offset:1px;" : "";
-      return L.divIcon({
-        className: "frota-pino",
-        html: `<span style="background:${cor};color:${texto};${borda}">${escHtml(v.placa)}</span>`,
-        iconSize: [0, 0],
-        iconAnchor: [0, 0],
-      });
-    }
-
-    function popupVivo(v) {
-      return "<b>" + escHtml(v.placa) + "</b><br>"
-        + escHtml(FROTA_ROTULO[v.status] || "Sem sinal") + "<br>"
-        + escHtml(fmtVel(v.velocidade)) + " · ignição " + escHtml(fmtIgnicao(v.ignicao)) + "<br>"
-        + escHtml(fmtPulso(v.minutos)) + "<br>"
-        + botaoAbrir("telemetria", v.placa, "Ver telemetria")
-        + botaoAbrir("paradas", v.placa, "Ver paradas");
-    }
-
-    function atualizarIconeSelecionado() {
-      (frotaVeiculos || []).forEach((v) => {
-        const marker = frotaMarcadores[v.placa];
-        if (marker) marker.setIcon(iconeFrota(v, v.placa === frotaSel));
-      });
-    }
-
-    async function pintarMapaVivo() {
-      const mapa = await criarMapaFrota("frota-mapa-vivo");
-      if (!mapa || aba !== "frota" || subFrota() !== "vivo") return;
-      mapa.invalidateSize();
-      mapa._camada.clearLayers();
-      frotaMarcadores = {};
-      const bounds = [];
-      (frotaVeiculos || []).forEach((v) => {
-        if (!coordOk(v.lat, v.lon)) return;
-        const ll = [Number(v.lat), Number(v.lon)];
-        const marker = L.marker(ll, { icon: iconeFrota(v, v.placa === frotaSel) });
-        marker.bindPopup(popupVivo(v));
-        marker.on("click", (ev) => {
-          L.DomEvent.stopPropagation(ev);
-          frotaFocar(v.placa);
-        });
-        marker.addTo(mapa._camada);
-        frotaMarcadores[v.placa] = marker;
-        bounds.push(ll);
-      });
-      if (!frotaVivoEnquadrou && bounds.length) {
-        mapa.fitBounds(bounds, { padding: [28, 28], maxZoom: 15 });
-        frotaVivoEnquadrou = true;
-      }
-      mapa.invalidateSize();
-    }
-
-    function frotaFocar(placa) {
-      frotaSel = placa || "";
-      pintarListaFrota();
-      atualizarIconeSelecionado();
-      const v = (frotaVeiculos || []).find((item) => item.placa === placa);
-      const estado = $("frota-vivo-estado");
-      if (!v || !coordOk(v.lat, v.lon)) {
-        if (estado) {
-          estado.className = "hint";
-          estado.textContent = "Sem posição para " + (placa || "este caminhão") + ".";
-        }
+      if (!body) return;
+      const topo = box ? box.scrollTop : 0;
+      if (!frotaVeiculos) {
+        body.innerHTML = "";
+        if (box) box.scrollTop = topo;
         return;
       }
-      const mapa = $("frota-mapa-vivo") && $("frota-mapa-vivo")._mapa;
-      if (!mapa) return;
-      mapa.setView([Number(v.lat), Number(v.lon)], 16);
-      const marker = frotaMarcadores[placa];
-      if (marker) marker.openPopup();
+      const lista = veiculosVisiveis();
+      if (!lista.length) {
+        const vazio = frotaVeiculos.length ? "Nenhum caminhão com esse filtro." : "Nenhum caminhão na frota.";
+        body.innerHTML = `<tr class="frota-vazio"><td colspan="7">${vazio}</td></tr>`;
+      } else {
+        body.innerHTML = lista.map((v) => `<tr>
+          <td data-label="Placa"><span class="frota-placa"><b>${escHtml(v.placa)}</b>${marcasVivo(v)}</span></td>
+          <td data-label="Descrição">${escHtml(v.descricao || "—")}</td>
+          <td data-label="Status">${tagStatus(v)}</td>
+          <td data-label="Velocidade">${escHtml(fmtVel(v.velocidade))}</td>
+          <td data-label="Ignição">${escHtml(fmtIgnicao(v.ignicao))}</td>
+          <td data-label="Último pulso">${htmlPulso(v)}</td>
+          <td class="frota-acoes" data-label="Ações"><div class="frota-item-acoes">${botaoAbrir("telemetria", v.placa, "Ver telemetria")}${botaoAbrir("paradas", v.placa, "Ver paradas")}</div></td>
+        </tr>`).join("");
+      }
+      if (box) box.scrollTop = topo;
     }
 
     function frotaAbrir(destino, placa) {
@@ -5962,8 +6651,8 @@
 
     async function carregarFrotaVivo() {
       if (aba !== "frota" || subFrota() !== "vivo") return;
-      if (frotaVivoOcupado) return;
-      frotaVivoOcupado = true;
+      const seq = ++frotaVivoSeq;
+      const op = frotaOperacaoId;
       const estado = $("frota-vivo-estado");
       const primeira = !frotaVeiculos;
       if (primeira && estado) {
@@ -5971,13 +6660,13 @@
         estado.textContent = "Carregando a frota...";
       }
       try {
-        const info = await apiFrota("/api/frota/ao-vivo");
-        if (aba !== "frota" || subFrota() !== "vivo") return;
+        const info = await apiFrota(urlFrota("/api/frota/ao-vivo"));
+        if (seq !== frotaVivoSeq || aba !== "frota" || subFrota() !== "vivo" || op !== frotaOperacaoId) return;
         frotaVeiculos = info.veiculos || [];
+        frotaPlacasOp = op;
         preencherPlacas(frotaVeiculos);
         pintarContadores();
         pintarListaFrota();
-        await pintarMapaVivo();
         if (aba !== "frota" || !estado) return;
         estado.className = "hint";
         const quando = fmtBrt(info.atualizado_em);
@@ -5985,15 +6674,13 @@
           ? "Atualizado " + (quando === "—" ? "agora" : quando) + " · " + frotaVeiculos.length + " caminhões."
           : "Nenhum caminhão na frota.";
       } catch (e) {
-        if (e && (e.name === "AbortError" || e.login)) return;
-        if (aba !== "frota") return;
+        if (e && e.name === "AbortError") return;
+        if (seq !== frotaVivoSeq || aba !== "frota" || op !== frotaOperacaoId) return;
         if (e && e.restrito) return sairFrotaRestrito();
         if (estado) {
-          estado.className = "hint frota-erro";
+          estado.className = "hint aud-alerta";
           estado.textContent = e.message || "Falha na API";
         }
-      } finally {
-        frotaVivoOcupado = false;
       }
     }
 
@@ -6024,27 +6711,25 @@
       return "Sem rota";
     }
 
-    function corParada(p) {
-      if (p.dentro_da_rota === true) return "#2a6fdb";
-      if (p.dentro_da_rota === false) return "#b34145";
-      return "#8a97a0";
+    function linkMapa(p) {
+      if (!coordOk(p.lat, p.lon)) return "—";
+      const q = Number(p.lat) + "," + Number(p.lon);
+      return `<a href="https://www.google.com/maps?q=${q}" target="_blank" rel="noopener">Abrir no Google Maps</a>`;
     }
 
-    function raioParada(min) {
-      const n = Math.max(0, Number(min) || 0);
-      return Math.max(8, Math.min(36, 6 + n * 0.45));
-    }
-
-    function popupParada(p) {
-      const ign = p.ignicao_desligada === true ? "desligada" : (p.ignicao_desligada === false ? "ligada" : "—");
-      return "<b>" + escHtml(p.placa) + "</b><br>"
-        + escHtml(fmtBrt(p.inicio)) + " – " + escHtml(fmtBrt(p.fim)) + "<br>"
-        + escHtml(fmtDuracao(p.duracao_min)) + "<br>"
-        + escHtml(p.endereco || "—") + "<br>Ignição " + ign;
-    }
-
-    function chaveParada(p) {
-      return String(p.placa || "") + "|" + String(p.inicio || "") + "|" + String(p.lat || "") + "|" + String(p.lon || "");
+    function htmlLinhaParada(p) {
+      const rotaCls = p.dentro_da_rota === false ? "aud-alerta" : (p.dentro_da_rota === true ? "aud-ok" : "");
+      const lacunaCls = p.com_lacuna ? "aud-alerta" : "";
+      return `<tr>
+        <td data-label="Caminhão">${escHtml(p.placa)}</td>
+        <td data-label="Início">${escHtml(fmtBrt(p.inicio))}</td>
+        <td data-label="Fim">${escHtml(fmtBrt(p.fim))}</td>
+        <td data-label="Duração">${escHtml(fmtDuracao(p.duracao_min))}</td>
+        <td data-label="Endereço">${escHtml(p.endereco || "—")}</td>
+        <td data-label="Rota" class="${rotaCls}">${escHtml(fmtRotaParada(p))}</td>
+        <td data-label="Sinal" class="${lacunaCls}">${p.com_lacuna ? "Lacuna de sinal" : "—"}</td>
+        <td data-label="Mapa">${linkMapa(p)}</td>
+      </tr>`;
     }
 
     function cmpParada(a, b) {
@@ -6084,77 +6769,41 @@
       tr.innerHTML = FROTA_COLS.map(([chave, rotulo]) => {
         const seta = frotaOrd.chave === chave ? (frotaOrd.dir > 0 ? " ↑" : " ↓") : "";
         return `<th><button type="button" class="frota-ord" data-frota-ord="${chave}">${rotulo}${seta}</button></th>`;
-      }).join("");
+      }).join("") + "<th>Mapa</th>";
     }
 
     function pintarTabelaParadas(lista) {
       renderCabecalho();
       const body = $("frota-tbody");
       if (!body) return;
-      frotaParadasVisiveis = lista;
       if (!lista.length) {
-        body.innerHTML = "";
+        body.innerHTML = frotaParadasConsultou
+          ? '<tr class="frota-vazio"><td colspan="8">Nenhuma parada no período.</td></tr>'
+          : "";
         return;
       }
-      body.innerHTML = lista.map((p) => {
-        const chave = chaveParada(p);
-        const rotaCls = p.dentro_da_rota === false ? "frota-erro" : (p.dentro_da_rota === true ? "frota-ok" : "");
-        const lacunaCls = p.com_lacuna ? "frota-erro" : "";
-        return `<tr data-frota-parada="${escHtml(chave)}" class="${chave === frotaParSel ? "frota-ativa" : ""}">
-          <td data-rotulo="Caminhão">${escHtml(p.placa)}</td>
-          <td data-rotulo="Início">${escHtml(fmtBrt(p.inicio))}</td>
-          <td data-rotulo="Fim">${escHtml(fmtBrt(p.fim))}</td>
-          <td data-rotulo="Duração">${escHtml(fmtDuracao(p.duracao_min))}</td>
-          <td data-rotulo="Endereço">${escHtml(p.endereco || "—")}</td>
-          <td data-rotulo="Rota" class="${rotaCls}">${escHtml(fmtRotaParada(p))}</td>
-          <td data-rotulo="Sinal" class="${lacunaCls}">${p.com_lacuna ? "Lacuna de sinal" : "—"}</td>
-        </tr>`;
-      }).join("");
+      body.innerHTML = lista.map(htmlLinhaParada).join("");
     }
 
-    function marcarLinhaParada() {
-      document.querySelectorAll("#frota-tbody tr").forEach((tr) => {
-        tr.classList.toggle("frota-ativa", tr.getAttribute("data-frota-parada") === frotaParSel);
-      });
-    }
-
-    async function pintarMapaParadas(lista, enquadrar) {
-      const mapa = await criarMapaFrota("frota-mapa-par");
-      if (!mapa || aba !== "frota") return;
-      mapa.invalidateSize();
-      mapa._camada.clearLayers();
-      frotaParCamadas = {};
-      const bounds = [];
-      lista.forEach((p) => {
-        if (!coordOk(p.lat, p.lon)) return;
-        const chave = chaveParada(p);
-        const ll = [Number(p.lat), Number(p.lon)];
-        const layer = L.circleMarker(ll, {
-          radius: raioParada(p.duracao_min),
-          color: "#fff",
-          weight: 1,
-          fillColor: corParada(p),
-          fillOpacity: 0.9,
-        }).bindPopup(popupParada(p));
-        layer.on("click", (ev) => {
-          L.DomEvent.stopPropagation(ev);
-          focarParada(chave);
-        });
-        layer.addTo(mapa._camada);
-        frotaParCamadas[chave] = layer;
-        bounds.push(ll);
-      });
-      if (enquadrar) {
-        if (bounds.length) mapa.fitBounds(bounds, { padding: [28, 28], maxZoom: 14 });
-        else mapa.setView([-16.82, -49.24], 12);
+    function pintarResumoParadas(lista) {
+      const box = $("frota-par-resumo");
+      if (!box) return;
+      if (!frotaParadasConsultou) {
+        box.hidden = true;
+        return;
       }
-      mapa.invalidateSize();
+      const fora = lista.filter((p) => p.dentro_da_rota === false).length;
+      const minutos = lista.reduce((soma, p) => soma + (Number(p.duracao_min) || 0), 0);
+      box.hidden = false;
+      if ($("frota-par-total")) $("frota-par-total").textContent = String(lista.length);
+      if ($("frota-par-tempo")) $("frota-par-tempo").textContent = fmtDuracao(minutos);
+      if ($("frota-par-fora-n")) $("frota-par-fora-n").textContent = String(fora);
     }
 
-    function pintarParadas(prefixo, enquadrar) {
+    function pintarParadas(prefixo) {
       const lista = paradasVisiveis();
       pintarTabelaParadas(lista);
-      pintarMapaParadas(lista, enquadrar);
+      pintarResumoParadas(lista);
       const estado = $("frota-par-estado");
       if (!estado) return;
       estado.className = "hint";
@@ -6167,29 +6816,15 @@
 
     function filtrarParadas() {
       if (!frotaParadasConsultou) return;
-      pintarParadas(frotaParAvisos, true);
+      pintarParadas(frotaParAvisos);
     }
 
     function ordenarParadas(chave) {
       if (!chave) return;
       if (frotaOrd.chave === chave) frotaOrd.dir = -frotaOrd.dir;
       else frotaOrd = { chave: chave, dir: 1 };
-      if (frotaParadasConsultou) pintarParadas(frotaParAvisos, false);
+      if (frotaParadasConsultou) pintarParadas(frotaParAvisos);
       else renderCabecalho();
-    }
-
-    async function focarParada(chave) {
-      frotaParSel = chave || "";
-      marcarLinhaParada();
-      const tr = document.querySelector("#frota-tbody tr.frota-ativa");
-      if (tr) tr.scrollIntoView({ block: "nearest" });
-      const p = (frotaParadasVisiveis || []).find((item) => chaveParada(item) === chave);
-      if (!p || !coordOk(p.lat, p.lon)) return;
-      const mapa = await criarMapaFrota("frota-mapa-par");
-      if (!mapa) return;
-      mapa.setView([Number(p.lat), Number(p.lon)], 17);
-      const layer = frotaParCamadas[chave];
-      if (layer) layer.openPopup();
     }
 
     async function consultarParadas() {
@@ -6206,7 +6841,7 @@
       frotaParAbort = ctrl;
       const toda = !$("frota-par-placa").value;
       if (estado) {
-        estado.className = toda ? "hint frota-aviso" : "hint";
+        estado.className = toda ? "hint aud-aviso" : "hint";
         estado.textContent = toda
           ? "Consultando a frota inteira. Pode levar alguns minutos."
           : "Carregando paradas...";
@@ -6214,24 +6849,24 @@
       const btn = $("btn-frota-par");
       if (btn) btn.disabled = true;
       try {
-        const info = await apiFrota("/api/frota/paradas?" + queryParadas(), { signal: ctrl.signal });
+        const info = await apiFrota(urlFrota("/api/frota/paradas?" + queryParadas()), { signal: ctrl.signal });
         if (seq !== frotaParSeq || aba !== "frota") return;
         frotaParadasCache = info.paradas || [];
         frotaParadasConsultou = true;
         frotaParAvisos = resumirAvisos(info.avisos);
-        frotaParSel = "";
-        pintarParadas(frotaParAvisos, true);
+        pintarParadas(frotaParAvisos);
       } catch (e) {
-        if (e && (e.name === "AbortError" || e.login)) return;
+        if (e && e.name === "AbortError") return;
         if (seq !== frotaParSeq || aba !== "frota") return;
         if (e && e.restrito) return sairFrotaRestrito();
         frotaParadasCache = [];
         frotaParadasConsultou = false;
         frotaParAvisos = "";
         pintarTabelaParadas([]);
-        pintarMapaParadas([], true);
+        const resumo = $("frota-par-resumo");
+        if (resumo) resumo.hidden = true;
         if (estado) {
-          estado.className = "hint frota-erro";
+          estado.className = "hint aud-alerta";
           estado.textContent = e.message || "Falha na API";
         }
       } finally {
@@ -6247,13 +6882,13 @@
       }
       const toda = !$("frota-par-placa").value;
       if (estado) {
-        estado.className = toda ? "hint frota-aviso" : "hint";
+        estado.className = toda ? "hint aud-aviso" : "hint";
         estado.textContent = toda
           ? "Consultando a frota inteira. Pode levar alguns minutos."
           : "Gerando o CSV...";
       }
       try {
-        const res = await fetch("/api/frota/paradas.csv?" + queryParadas());
+        const res = await fetch(urlFrota("/api/frota/paradas.csv?" + queryParadas()));
         if (aba !== "frota") return;
         if (res.status === 401) {
           mostrarLogin("Faça login para continuar.");
@@ -6277,7 +6912,7 @@
         }
       } catch (e) {
         if (aba !== "frota" || !estado) return;
-        estado.className = "hint frota-erro";
+        estado.className = "hint aud-alerta";
         estado.textContent = erroPainel(e);
       }
     }
@@ -6354,60 +6989,18 @@
       </svg>`;
     }
 
-    function trechosTrajeto(pontos) {
-      const lista = (pontos || []).map((p) => ({
-        t: tsMs(p.ts),
-        lat: Number(p.lat),
-        lon: Number(p.lon),
-      })).filter((p) => Number.isFinite(p.t) && coordOk(p.lat, p.lon)).sort((a, b) => a.t - b.t);
-      const trechos = [];
-      let atual = [];
-      lista.forEach((p) => {
-        const prev = atual[atual.length - 1];
-        if (prev && p.t - prev.t > 10 * 60 * 1000) {
-          if (atual.length) trechos.push(atual);
-          atual = [];
-        }
-        atual.push(p);
-      });
-      if (atual.length) trechos.push(atual);
-      return trechos;
+    function pintarParadasTel(paradas) {
+      const body = $("frota-tel-tbody");
+      if (!body) return;
+      const lista = paradas || [];
+      if (!lista.length) {
+        body.innerHTML = '<tr class="frota-vazio"><td colspan="8">Nenhuma parada no período.</td></tr>';
+        return;
+      }
+      body.innerHTML = lista.map(htmlLinhaParada).join("");
     }
 
-    async function pintarMapaTel(pontos, paradas) {
-      const mapa = await criarMapaFrota("frota-mapa-tel");
-      if (!mapa || aba !== "frota") return;
-      mapa.invalidateSize();
-      mapa._camada.clearLayers();
-      const bounds = [];
-      trechosTrajeto(pontos).forEach((trecho) => {
-        const ll = trecho.map((p) => [p.lat, p.lon]);
-        if (ll.length >= 2) {
-          L.polyline(ll, { color: "#fff", weight: 8, opacity: 0.9 }).addTo(mapa._camada);
-          L.polyline(ll, { color: "#0f7a80", weight: 4, opacity: 0.95 }).addTo(mapa._camada);
-        } else if (ll.length === 1) {
-          L.circleMarker(ll[0], { radius: 5, color: "#fff", weight: 1, fillColor: "#0f7a80", fillOpacity: 1 }).addTo(mapa._camada);
-        }
-        ll.forEach((p) => bounds.push(p));
-      });
-      (paradas || []).forEach((p) => {
-        if (!coordOk(p.lat, p.lon)) return;
-        const ll = [Number(p.lat), Number(p.lon)];
-        L.circleMarker(ll, {
-          radius: raioParada(p.duracao_min),
-          color: "#fff",
-          weight: 1,
-          fillColor: corParada(p),
-          fillOpacity: 0.9,
-        }).bindPopup(popupParada(p)).addTo(mapa._camada);
-        bounds.push(ll);
-      });
-      if (bounds.length) mapa.fitBounds(bounds, { padding: [28, 28], maxZoom: 16 });
-      else mapa.setView([-16.82, -49.24], 12);
-      mapa.invalidateSize();
-    }
-
-    function pintarTelemetria(tel, traj, par) {
+    function pintarTelemetria(tel, par) {
       const corpo = $("frota-tel-corpo");
       const estado = $("frota-tel-estado");
       if (corpo) corpo.hidden = false;
@@ -6431,7 +7024,8 @@
           : "Nenhum pulso no período.";
       }
       desenharVelocidade(tel.serie || [], (par && par.paradas) || []);
-      pintarMapaTel((traj && traj.pontos) || [], (par && par.paradas) || []);
+      pintarParadasTel((par && par.paradas) || []);
+      frotaTelConsultou = true;
     }
 
     async function carregarTelemetria() {
@@ -6458,20 +7052,20 @@
       try {
         const q = queryTel();
         const opt = { signal: ctrl.signal };
-        const [tel, traj, par] = await Promise.all([
-          apiFrota("/api/frota/telemetria?" + q, opt),
-          apiFrota("/api/frota/trajeto?" + q, opt),
-          apiFrota("/api/frota/paradas?" + q + "&min=5&max=60", opt),
+        const [tel, par] = await Promise.all([
+          apiFrota(urlFrota("/api/frota/telemetria?" + q), opt),
+          apiFrota(urlFrota("/api/frota/paradas?" + q + "&min=5&max=60"), opt),
         ]);
         if (seq !== frotaTelSeq || aba !== "frota") return;
-        pintarTelemetria(tel, traj, par);
+        pintarTelemetria(tel, par);
       } catch (e) {
-        if (e && (e.name === "AbortError" || e.login)) return;
+        if (e && e.name === "AbortError") return;
         if (seq !== frotaTelSeq || aba !== "frota") return;
         if (e && e.restrito) return sairFrotaRestrito();
+        frotaTelConsultou = false;
         if (corpo) corpo.hidden = true;
         if (estado) {
-          estado.className = "hint frota-erro";
+          estado.className = "hint aud-alerta";
           estado.textContent = e.message || "Falha na API";
         }
       } finally {
@@ -6483,42 +7077,37 @@
       if (ligarCliqueFrota.feito) return;
       ligarCliqueFrota.feito = true;
       renderCabecalho();
-      const fora = $("frota-par-fora");
-      if (fora) fora.addEventListener("change", () => filtrarParadas());
-      const consultar = $("btn-frota-par");
-      if (consultar) consultar.addEventListener("click", () => consultarParadas());
-      const csv = $("btn-frota-csv");
-      if (csv) csv.addEventListener("click", () => baixarParadasCsv());
-      const tel = $("btn-frota-tel");
-      if (tel) tel.addEventListener("click", () => carregarTelemetria());
+      const status = $("frota-vivo-status");
+      const busca = $("frota-vivo-busca");
+      const selOp = $("frota-operacao");
+      const buscaPlaca = $("frota-op-busca");
+      if (status) status.addEventListener("change", pintarListaFrota);
+      if (busca) busca.addEventListener("input", pintarListaFrota);
+      if (selOp) selOp.addEventListener("change", aoMudarOperacao);
+      if (buscaPlaca) buscaPlaca.addEventListener("input", agendarBuscaPlaca);
       document.addEventListener("click", (ev) => {
         const alvo = ev.target && ev.target.closest ? ev.target : null;
-        if (!alvo) return;
-        const ir = alvo.closest("[data-frota-ir]");
-        if (ir) {
-          frotaAbrir(ir.getAttribute("data-frota-ir"), ir.getAttribute("data-frota-placa-ir"));
+        if (!alvo || !alvo.closest) return;
+        const acao = alvo.closest("[data-frota-acao]");
+        if (acao) {
+          const nome = acao.getAttribute("data-frota-acao");
+          if (nome === "fixar") fixarPlacaOperacao(acao.getAttribute("data-placa") || "");
+          else if (nome === "remover-placa") removerPlacaOperacao(acao.getAttribute("data-placa") || "");
+          else acaoOperacao(nome, acao.getAttribute("data-id"));
           return;
         }
         const ord = alvo.closest("[data-frota-ord]");
-        if (ord) {
-          ordenarParadas(ord.getAttribute("data-frota-ord"));
-          return;
-        }
-        const item = alvo.closest("[data-frota-placa]");
-        if (item && item.closest("#frota-lista")) {
-          frotaFocar(item.getAttribute("data-frota-placa"));
-          return;
-        }
-        const linha = alvo.closest("[data-frota-parada]");
-        if (linha) focarParada(linha.getAttribute("data-frota-parada"));
+        if (ord) ordenarParadas(ord.getAttribute("data-frota-ord"));
       });
-      window.addEventListener("resize", () => {
-        if (aba !== "frota") return;
-        const ids = { vivo: "frota-mapa-vivo", paradas: "frota-mapa-par", telemetria: "frota-mapa-tel" };
-        const el = $(ids[subFrota()]);
-        if (el && el._mapa) el._mapa.invalidateSize();
+      document.addEventListener("keydown", (ev) => {
+        if (ev.key !== "Enter") return;
+        const inp = ev.target;
+        if (!inp || inp.id !== "frota-renomear-input") return;
+        ev.preventDefault();
+        acaoOperacao("renomear-salvar", inp.getAttribute("data-id"));
       });
     }
+
     /* /frota */
 
 
